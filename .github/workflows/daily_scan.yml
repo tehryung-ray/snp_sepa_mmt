@@ -1,0 +1,85 @@
+name: Daily Momentum x SEPA Scan
+
+on:
+  schedule:
+    # 12:00 UTC = 밤 9시 KST (미국장 마감 후, 평일)
+    - cron: '0 12 * * 1-5'
+
+  workflow_dispatch:
+    inputs:
+      top_n:
+        description: 'SEPA 분석 대상 상위 종목 수'
+        required: false
+        type: string
+        default: '20'
+
+jobs:
+  scan-and-publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write   # docs/ + data/ 커밋에 필요
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run momentum x SEPA scan
+        env:
+          TOP_N: ${{ github.event.inputs.top_n || '20' }}
+        run: |
+          echo "=== S&P 500 Momentum x SEPA Scan ==="
+          echo "  Top N: $TOP_N"
+          mkdir -p data/daily docs
+          python run_daily.py --top "$TOP_N"
+
+      - name: Commit results
+        id: commit
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          git add docs/ data/daily/
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            git commit -m "scan: momentum x SEPA - ${{ steps.date.outputs.date }}"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Push changes
+        if: steps.commit.outputs.has_changes == 'true'
+        uses: ad-m/github-push-action@v0.8.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-${{ steps.date.outputs.date }}
+          path: |
+            data/daily/latest.json
+            docs/index.html
+          if-no-files-found: warn
+          retention-days: 90

@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>모멘텀 × SEPA 스크리너 | 2026-08-06</title>
+<meta name="description" content="S&amp;P 500 가중 모멘텀 상위 20개 종목의 미너비니 SEPA 스코어">
+<style>
+:root{
+  --bg:#0b1220; --panel:#131c2e; --panel2:#1a2438; --line:#26324a;
+  --ink:#e6ecf7; --ink2:#94a3b8; --ink3:#64748b;
+  --accent:#f5a524;           /* 모멘텀 = 열기 */
+  --good:#34d399; --warn:#fbbf24; --bad:#f87171; --info:#60a5fa;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',
+    'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  background:var(--bg); color:var(--ink); line-height:1.55;
+  -webkit-font-smoothing:antialiased; font-size:15px;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+.num{font-variant-numeric:tabular-nums}
+
+/* ── 헤더 ───────────────────────────────────────────── */
+header{
+  background:linear-gradient(160deg,#16203a 0%,#0e1728 100%);
+  border-bottom:1px solid var(--line); padding:30px 16px 26px;
+}
+.eyebrow{
+  font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:8px
+}
+h1{font-size:clamp(21px,4.4vw,29px);font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+.sub{margin-top:7px;font-size:13px;color:var(--ink2)}
+.sub b{color:var(--ink);font-weight:600}
+
+/* ── 시장 요약 ──────────────────────────────────────── */
+.market{
+  display:grid;grid-template-columns:minmax(190px,1.25fr) repeat(4,1fr);
+  gap:10px;margin:22px 0 26px
+}
+.mcard{
+  background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px 15px
+}
+.mcard.spy{border-color:#3b5680;background:linear-gradient(150deg,#17253d,#131c2e)}
+.mlabel{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3)}
+.mval{font-size:23px;font-weight:800;letter-spacing:-.02em;margin-top:3px}
+.mnote{font-size:11.5px;color:var(--ink2);margin-top:3px}
+.mcard.spy .mnote{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+
+/* ── 섹션 ───────────────────────────────────────────── */
+.sec{margin:30px 0}
+.sec-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.sec h2{font-size:17px;font-weight:800;letter-spacing:-.01em}
+.sec-note{font-size:12.5px;color:var(--ink2)}
+
+/* ── 랭킹 행 ────────────────────────────────────────── */
+.cols{
+  display:grid;
+  grid-template-columns:34px 108px 66px 62px 84px 96px 1fr 108px;
+  gap:10px;align-items:center
+}
+.colhead{
+  padding:0 14px 7px;font-size:10.5px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--line)
+}
+.row{
+  background:var(--panel);border:1px solid var(--line);border-radius:11px;
+  margin-top:7px;overflow:hidden
+}
+.row.buy{border-color:#2f6b52;background:linear-gradient(100deg,#13251d 0%,var(--panel) 42%)}
+.row>summary{padding:12px 14px;cursor:pointer;list-style:none}
+.row>summary::-webkit-details-marker{display:none}
+.row>summary:hover{background:var(--panel2)}
+.row[open]>summary{background:var(--panel2);border-bottom:1px solid var(--line)}
+
+.rank{font-size:17px;font-weight:800;color:var(--accent);text-align:center}
+.tk{font-size:16px;font-weight:800;letter-spacing:-.01em}
+.tk .nm{display:block;font-size:11px;font-weight:400;color:var(--ink3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sect{
+  display:inline-block;font-size:11px;font-weight:700;padding:2.5px 7px;
+  border-radius:5px;background:#22304a;color:#a9bdd9;white-space:nowrap
+}
+.mom{font-size:15px;font-weight:700;color:var(--accent)}
+.mom small{display:block;font-size:10px;font-weight:400;color:var(--ink3);letter-spacing:.04em}
+
+.phase{
+  display:inline-block;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:20px;
+  white-space:nowrap
+}
+.p1{background:#1e3a5f;color:#7dd3fc}
+.p2{background:#14432f;color:#6ee7b7}
+.p3{background:#42320c;color:#fcd34d}
+.p4{background:#451a1a;color:#fca5a5}
+
+/* 8개 조건 점 */
+.dots{display:flex;gap:3px;align-items:center}
+.dot{width:9px;height:9px;border-radius:2px;background:#31405c}
+.dot.on{background:var(--good)}
+.dots .cnt{margin-left:5px;font-size:11.5px;font-weight:700;color:var(--ink2)}
+
+/* SEPA 점수 막대 */
+.bar{position:relative;height:19px;background:#1d2941;border-radius:4px;overflow:hidden}
+.bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;display:block}
+.bar .mark{position:absolute;top:0;bottom:0;width:2px;background:#6b7ea0;opacity:.85}
+.bar .txt{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:flex-end;
+  padding-right:7px;font-size:11.5px;font-weight:800;color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,.6)
+}
+.barnote{font-size:10px;color:var(--ink3);margin-top:2px;letter-spacing:.03em}
+
+.px{text-align:right;font-size:14px;font-weight:700}
+.px small{display:block;font-size:10.5px;font-weight:400;color:var(--ink3);margin-top:1px}
+
+/* ── 상세 ───────────────────────────────────────────── */
+.detail{padding:15px 15px 17px;background:#101828}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.dtitle{
+  font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink3);margin-bottom:9px
+}
+.comp{display:flex;align-items:center;gap:9px;margin-bottom:6px;font-size:12.5px}
+.comp .cn{width:60px;flex-shrink:0;color:var(--ink2)}
+.comp .cb{flex:1;height:7px;background:#1d2941;border-radius:3px;overflow:hidden}
+.comp .cb>i{display:block;height:100%;background:var(--info);border-radius:3px}
+.comp .cv{width:56px;flex-shrink:0;text-align:right;font-weight:700}
+
+.crit{display:flex;align-items:center;gap:7px;margin-bottom:4px;font-size:12.5px}
+.crit .ck{width:14px;flex-shrink:0;font-weight:800;text-align:center}
+.crit.ok .ck{color:var(--good)}
+.crit.no .ck{color:var(--bad)}
+.crit.no span{color:var(--ink3)}
+
+.plan{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 12px;
+  padding:11px;background:var(--panel);border:1px solid var(--line);border-radius:9px
+}
+.plan div{text-align:center}
+.plan .pl{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.plan .pv{font-size:15px;font-weight:800;margin-top:2px}
+.pv.stop{color:var(--bad)} .pv.mid{color:var(--warn)} .pv.tgt{color:var(--good)}
+
+.why{list-style:none;font-size:12.5px;color:var(--ink2)}
+.why li{padding:2.5px 0 2.5px 13px;position:relative}
+.why li:before{content:'';position:absolute;left:2px;top:11px;width:4px;height:4px;
+  border-radius:50%;background:var(--ink3)}
+.block{
+  margin-top:11px;padding:8px 11px;border-radius:7px;font-size:12.5px;
+  background:#2a1c14;border:1px solid #5a3a1e;color:#fcd34d
+}
+.block.pass{background:#122b21;border-color:#2f6b52;color:#6ee7b7}
+
+/* ── 푸터 ───────────────────────────────────────────── */
+footer{
+  margin-top:44px;padding:24px 16px 32px;border-top:1px solid var(--line);
+  background:#0a101c;font-size:12px;color:var(--ink3)
+}
+footer p{margin-bottom:5px}
+footer b{color:var(--ink2)}
+
+/* ── 모바일 ─────────────────────────────────────────── */
+@media (max-width:820px){
+  .market{grid-template-columns:1fr 1fr}
+  .mcard.spy{grid-column:1/-1}
+  .mcard.spy .mnote{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .colhead{display:none}
+  .cols{grid-template-columns:30px 1fr auto;grid-template-areas:
+    "rank tk   phase"
+    "rank sect mom"
+    "dots dots dots"
+    "bar  bar  bar"
+    "px   px   px";
+    gap:5px 9px}
+  .cols>.rank{grid-area:rank;align-self:start;padding-top:2px}
+  .cols>.tk{grid-area:tk}
+  .cols>.sectwrap{grid-area:sect}
+  .cols>.momwrap{grid-area:mom;text-align:right}
+  .cols>.phasewrap{grid-area:phase;text-align:right}
+  .cols>.dotswrap{grid-area:dots;margin-top:5px}
+  .dotswrap:before{
+    content:'트렌드 템플릿';font-size:10px;font-weight:700;letter-spacing:.06em;
+    color:var(--ink3);margin-right:7px
+  }
+  .dots{display:inline-flex;vertical-align:middle}
+  .cols>.barwrap{grid-area:bar;margin-top:3px}
+  .cols>.pxwrap{grid-area:px;display:flex;gap:14px;align-items:baseline;
+    justify-content:flex-start;margin-top:6px;text-align:left}
+  .px small{display:inline;margin:0}
+  .px{text-align:left}
+  .dgrid{grid-template-columns:1fr;gap:16px}
+  .plan{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">S&amp;P 500 · Momentum × SEPA</div>
+    <h1>가중 모멘텀 상위 20개의 SEPA 점검</h1>
+    <p class="sub">기준일 <b>2026-08-06</b> · 유니버스 <b>501종목</b>
+      · 모멘텀 가중치 <b>12×1개월 + 4×3개월 + 2×6개월 + 1×12개월</b></p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="market">
+    
+    <div class="mcard spy">
+      <div class="mlabel">시장 기준 · SPY</div>
+      <div class="mval num">$768.56</div>
+      <div class="mnote"><span class="phase p2">P2 상승추세</span>
+        <span class="num">신뢰도 85% · 50일선 +3.0%</span></div>
+    </div>
+    <div class="mcard">
+      <div class="mlabel">매수 적격</div>
+      <div class="mval num" style="color:var(--good)">10<small style="font-size:14px;color:var(--ink3)">/20</small></div>
+      <div class="mnote">Phase 2 + 템플릿 + 60점</div>
+    </div>
+    <div class="mcard">
+      <div class="mlabel">템플릿 통과</div>
+      <div class="mval num">11<small style="font-size:14px;color:var(--ink3)">/20</small></div>
+      <div class="mnote">8개 조건 중 7개 이상</div>
+    </div>
+    <div class="mcard">
+      <div class="mlabel">Phase 2</div>
+      <div class="mval num">11<small style="font-size:14px;color:var(--ink3)">/20</small></div>
+      <div class="mnote">확정 상승추세 국면</div>
+    </div>
+    <div class="mcard">
+      <div class="mlabel">평균 SEPA</div>
+      <div class="mval num">82<small style="font-size:14px;color:var(--ink3)">/125</small></div>
+      <div class="mnote">상위 20개 평균</div>
+    </div>
+  </div>
+
+  <section class="sec">
+    <div class="sec-head">
+      <h2>모멘텀 랭킹 × SEPA 점수</h2>
+      <span class="sec-note">행을 눌러 점수 구성과 8개 조건을 펼쳐 보세요</span>
+    </div>
+
+    <div class="cols colhead">
+      <div>#</div><div>종목</div><div>섹터</div><div>모멘텀</div>
+      <div>국면</div><div>템플릿</div><div>SEPA 점수</div><div style="text-align:right">현재가</div>
+    </div>
+
+    
+<details class="row">
+  <summary>
+    <div class="cols">
+      <div class="rank num">1</div>
+      <div class="tk">SNDK<span class="nm">Sandisk</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">27.64<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot"></i><i class="dot on"></i><i class="dot"></i><i class="dot"></i><span class="cnt">5/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:58.2%;background:#5eb894"></i><span class="mark" style="left:48.0%"></span><span class="txt num">73</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$1,258.58
+        <small>손절 $1,132.72</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$1,258.58</div></div><div><div class="pl">손절가</div><div class="pv stop num">$1,132.72</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$1,689.07</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$2,119.56</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:38%"></i></span><span class="cv num">15<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">40<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">15<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:28%"></i></span><span class="cv num">2.8<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 5/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit no"><span class="ck">✕</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit no"><span class="ck">✕</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit no"><span class="ck">✕</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 -1.973 · 손익비 6.8:1 · 52주고가 대비 -46.5%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>⚠ 50일선 이탈: -25.8%</li><li>⚠ 이평선 횡보 또는 하락</li><li>🟢 매출: 3Q 평균 49.7% QoQ (21.4% → 31.1% → 96.7%)</li><li>🟢 EPS: +273% YoY (강한 이익 성장)</li><li>⚠ 재고 증가 (13.6% QoQ)</li><li>⚠ 하락일 거래량 우위 (비율 0.78 — 분산 매도)</li><li>⚠ 상대강도 하락: -1.973 (SPY 대비 부진)</li><li>🟢 탁월한 손익비: 6.8:1 (상승 $860.98 / 위험 $125.86)</li><li>진입 구간 이탈: 50일선 -25.8%</li></ul>
+    <div class="block">⏸ 매수 보류 — Phase 1 (미너비니는 Phase 2만 매수)</div>
+  </div>
+</details>
+<details class="row buy">
+  <summary>
+    <div class="cols">
+      <div class="rank num">2</div>
+      <div class="tk">DELL<span class="nm">Dell Technologies</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">11.12<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><span class="cnt">8/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:80.0%;background:var(--good)"></i><span class="mark" style="left:48.0%"></span><span class="txt num">100</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$437.65
+        <small>손절 $408.38</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$437.65</div></div><div><div class="pl">손절가</div><div class="pv stop num">$408.38</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$503.30</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$568.94</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:75%"></i></span><span class="cv num">30<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">40<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">15<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:70%"></i></span><span class="cv num">7<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:38%"></i></span><span class="cv num">3.8<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:84%"></i></span><span class="cv num">4.2<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 8/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit ok"><span class="ck">✓</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 +0.119 · 손익비 4.5:1 · 52주고가 대비 -9.9%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>양호한 상승추세: 50일선 +6.1%</li><li>이평선 강한 상승 (50:0.929 / 200:0.656)</li><li>🟢 매출: 3Q 평균 15.2% QoQ (-9.3% → 23.6% → 31.3%)</li><li>🟢 EPS: +282% YoY (강한 이익 성장)</li><li>⚠ 재고 급증 (44.2% QoQ — 수요 둔화 우려)</li><li>⚠ 하락일 거래량 우위 (비율 0.88 — 분산 매도)</li><li>✓ 강한 상대강도: 0.119 (SPY 대비 초과수익)</li><li>🟢 우수한 손익비: 4.5:1</li><li>🟢 52주 고가 근접: 고가 대비 9.9%</li></ul>
+    <div class="block pass">✅ 매수 적격 — Phase 2 · Trend Template 통과 · SEPA 임계값 충족</div>
+  </div>
+</details>
+<details class="row">
+  <summary>
+    <div class="cols">
+      <div class="rank num">3</div>
+      <div class="tk">MU<span class="nm">Micron Technology</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">10.18<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot"></i><i class="dot on"></i><i class="dot"></i><i class="dot"></i><span class="cnt">5/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:65.9%;background:#5eb894"></i><span class="mark" style="left:48.0%"></span><span class="txt num">82</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$881.47
+        <small>손절 $793.32</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$881.47</div></div><div><div class="pl">손절가</div><div class="pv stop num">$793.32</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$1,048.16</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$1,214.85</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:63%"></i></span><span class="cv num">25.3<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">40<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:91%"></i></span><span class="cv num">13.7<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:35%"></i></span><span class="cv num">3.5<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 5/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit no"><span class="ck">✕</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit no"><span class="ck">✕</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit no"><span class="ck">✕</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 -0.653 · 손익비 3.8:1 · 52주고가 대비 -29.8%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>⚠ 50일선 이탈: -9.3%</li><li>이평선 강한 상승 (50:0.376 / 200:0.706)</li><li>🟢 매출: 3Q 평균 56.4% QoQ (20.6% → 74.9% → 73.7%)</li><li>🟢 EPS: +1368% YoY (강한 이익 성장)</li><li>재고 중립 (3.6% QoQ)</li><li>⚠ 하락일 거래량 우위 (비율 0.85 — 분산 매도)</li><li>⚠ 상대강도 하락: -0.653 (SPY 대비 부진)</li><li>🟢 양호한 손익비: 3.8:1</li><li>진입 구간 이탈: 50일선 -9.3%</li></ul>
+    <div class="block">⏸ 매수 보류 — Phase 1 (미너비니는 Phase 2만 매수)</div>
+  </div>
+</details>
+<details class="row">
+  <summary>
+    <div class="cols">
+      <div class="rank num">4</div>
+      <div class="tk">LITE<span class="nm">Lumentum</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">10.12<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot"></i><span class="cnt">7/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:55.2%;background:#5eb894"></i><span class="mark" style="left:48.0%"></span><span class="txt num">69</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$838.06
+        <small>손절 $754.25</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$838.06</div></div><div><div class="pl">손절가</div><div class="pv stop num">$754.25</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$930.42</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$1,022.78</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:27%"></i></span><span class="cv num">10.7<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">40<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:28%"></i></span><span class="cv num">4.2<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:32%"></i></span><span class="cv num">3.2<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:93%"></i></span><span class="cv num">9.3<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:30%"></i></span><span class="cv num">1.5<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 7/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit no"><span class="ck">✕</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 -0.105 · 손익비 2.2:1 · 52주고가 대비 -22.8%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>약한 상승추세: 50일선 +2.4%</li><li>⚠ 이평선 횡보 또는 하락</li><li>🟢 매출: 3Q 평균 19.1% QoQ (11.0% → 24.7% → 21.5%)</li><li>🟢 EPS: +334% YoY (강한 이익 성장)</li><li>⚠ 재고 증가 (10.9% QoQ)</li><li>✓ 상승일 거래량 우위 (비율 1.43)</li><li>⚠ 상대강도 하락: -0.105 (SPY 대비 부진)</li><li>🟡 수용 가능한 손익비: 2.2:1</li><li>✓ 최적 돌파 구간: 50일선 2.4%</li></ul>
+    <div class="block">⏸ 매수 보류 — Phase 1 (미너비니는 Phase 2만 매수)</div>
+  </div>
+</details>
+<details class="row buy">
+  <summary>
+    <div class="cols">
+      <div class="rank num">5</div>
+      <div class="tk">HPE<span class="nm">Hewlett Packard Enterprise</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">9.26<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><span class="cnt">8/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:73.3%;background:var(--good)"></i><span class="mark" style="left:48.0%"></span><span class="txt num">92</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$52.43
+        <small>손절 $47.19</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$52.43</div></div><div><div class="pl">손절가</div><div class="pv stop num">$47.19</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$60.29</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$68.16</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:75%"></i></span><span class="cv num">30<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:84%"></i></span><span class="cv num">33.4<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:60%"></i></span><span class="cv num">9<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:61%"></i></span><span class="cv num">6.1<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:62%"></i></span><span class="cv num">3.1<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 8/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit ok"><span class="ck">✓</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 +0.375 · 손익비 3.0:1 · 52주고가 대비 -18.2%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>강한 상승추세: 50일선 +11.0%</li><li>이평선 강한 상승 (50:0.716 / 200:0.402)</li><li>🟢 매출: 3Q 평균 5.6% QoQ (5.9% → -3.9% → 14.8%)</li><li>🟢 EPS: +154% YoY (강한 이익 성장)</li><li>⚠ 재고 급증 (30.7% QoQ — 수요 둔화 우려)</li><li>상승일 거래량 소폭 우위 (비율 1.11)</li><li>✓ 강한 상대강도: 0.375 (SPY 대비 초과수익)</li><li>🟢 양호한 손익비: 3.0:1</li><li>🟡 52주 고가 25% 이내: 고가 대비 18.2%</li></ul>
+    <div class="block pass">✅ 매수 적격 — Phase 2 · Trend Template 통과 · SEPA 임계값 충족</div>
+  </div>
+</details>
+<details class="row buy">
+  <summary>
+    <div class="cols">
+      <div class="rank num">6</div>
+      <div class="tk">PANW<span class="nm">Palo Alto Networks</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">8.72<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><span class="cnt">8/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:63.5%;background:#5eb894"></i><span class="mark" style="left:48.0%"></span><span class="txt num">79</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$359.49
+        <small>손절 $323.54</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$359.49</div></div><div><div class="pl">손절가</div><div class="pv stop num">$323.54</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$413.41</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$467.34</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:75%"></i></span><span class="cv num">30<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:60%"></i></span><span class="cv num">24.1<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:60%"></i></span><span class="cv num">9<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:49%"></i></span><span class="cv num">4.9<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:71%"></i></span><span class="cv num">7.1<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:86%"></i></span><span class="cv num">4.3<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 8/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit ok"><span class="ck">✓</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 -0.003 · 손익비 3.0:1 · 52주고가 대비 -4.6%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>강한 상승추세: 50일선 +14.6%</li><li>이평선 강한 상승 (50:0.807 / 200:0.303)</li><li>🟢 매출: 3Q 평균 6.0% QoQ (-2.5% → 4.9% → 15.7%)</li><li>🔴 EPS: -159% YoY</li><li>상승일 거래량 소폭 우위 (비율 1.21)</li><li>중립 상대강도: -0.003</li><li>🟢 양호한 손익비: 3.0:1</li><li>🟢 52주 고가권: 고가 대비 4.6% (피벗 존)</li></ul>
+    <div class="block pass">✅ 매수 적격 — Phase 2 · Trend Template 통과 · SEPA 임계값 충족</div>
+  </div>
+</details>
+<details class="row">
+  <summary>
+    <div class="cols">
+      <div class="rank num">7</div>
+      <div class="tk">ZBRA<span class="nm">Zebra Technologies</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">8.05<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot"></i><i class="dot"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><span class="cnt">6/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:73.6%;background:var(--good)"></i><span class="mark" style="left:48.0%"></span><span class="txt num">92</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$364.24
+        <small>손절 $327.82</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$364.24</div></div><div><div class="pl">손절가</div><div class="pv stop num">$327.82</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$418.88</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$473.51</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:50%"></i></span><span class="cv num">20<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">40<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:60%"></i></span><span class="cv num">9<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:60%"></i></span><span class="cv num">3<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 6/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit no"><span class="ck">✕</span><span>150일선 &gt; 200일선</span></div><div class="crit no"><span class="ck">✕</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit ok"><span class="ck">✓</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 +1.573 · 손익비 3.0:1 · 52주고가 대비 -3.3%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>강한 상승추세: 50일선 +38.9%</li><li>이평선 강한 상승 (50:0.315 / 200:-0.036)</li><li>⚠ 과열: 50일선 +38.9%</li><li>🟢 매출: 3Q 평균 5.7% QoQ (11.7% → 1.4% → 4.1%)</li><li>🟢 EPS: +121% YoY (강한 이익 성장)</li><li>⚠ 재고 증가 (5.9% QoQ)</li><li>✓ 상승일 거래량 우위 (비율 1.63)</li><li>✓ 강한 상대강도: 1.573 (SPY 대비 초과수익)</li><li>🟢 양호한 손익비: 3.0:1</li><li>🟢 52주 고가권: 고가 대비 3.3% (피벗 존)</li></ul>
+    <div class="block">⏸ 매수 보류 — Trend Template 6/8 (최소 7 필요)</div>
+  </div>
+</details>
+<details class="row buy">
+  <summary>
+    <div class="cols">
+      <div class="rank num">8</div>
+      <div class="tk">NTAP<span class="nm">NetApp</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">7.56<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><span class="cnt">8/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:68.6%;background:#5eb894"></i><span class="mark" style="left:48.0%"></span><span class="txt num">86</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$191.48
+        <small>손절 $172.33</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$191.48</div></div><div><div class="pl">손절가</div><div class="pv stop num">$172.33</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$220.20</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$248.92</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:75%"></i></span><span class="cv num">30<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:74%"></i></span><span class="cv num">29.8<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:60%"></i></span><span class="cv num">9<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:27%"></i></span><span class="cv num">2.7<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:84%"></i></span><span class="cv num">4.2<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 8/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit ok"><span class="ck">✓</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 +0.690 · 손익비 3.0:1 · 52주고가 대비 -2.2%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>강한 상승추세: 50일선 +15.5%</li><li>이평선 강한 상승 (50:0.685 / 200:0.223)</li><li>🟢 매출: 3Q 평균 7.9% QoQ (9.4% → 0.5% → 13.7%)</li><li>🟢 EPS: +23% YoY</li><li>⚠ 재고 급증 (81.7% QoQ — 수요 둔화 우려)</li><li>⚠ 하락일 거래량 우위 (비율 0.77 — 분산 매도)</li><li>✓ 강한 상대강도: 0.690 (SPY 대비 초과수익)</li><li>🟢 양호한 손익비: 3.0:1</li><li>🟢 52주 고가권: 고가 대비 2.2% (피벗 존)</li></ul>
+    <div class="block pass">✅ 매수 적격 — Phase 2 · Trend Template 통과 · SEPA 임계값 충족</div>
+  </div>
+</details>
+<details class="row">
+  <summary>
+    <div class="cols">
+      <div class="rank num">9</div>
+      <div class="tk">STX<span class="nm">Seagate Technology</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">7.00<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot"></i><i class="dot on"></i><i class="dot"></i><i class="dot"></i><span class="cnt">5/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:68.2%;background:#5eb894"></i><span class="mark" style="left:48.0%"></span><span class="txt num">85</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$852.95
+        <small>손절 $767.66</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$852.95</div></div><div><div class="pl">손절가</div><div class="pv stop num">$767.66</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$984.63</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$1,116.31</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:68%"></i></span><span class="cv num">27.2<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">40<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:63%"></i></span><span class="cv num">9.5<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:16%"></i></span><span class="cv num">1.6<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:66%"></i></span><span class="cv num">6.6<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:4%"></i></span><span class="cv num">0.2<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 5/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit no"><span class="ck">✕</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit no"><span class="ck">✕</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit no"><span class="ck">✕</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 -0.203 · 손익비 3.1:1 · 52주고가 대비 -25.5%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>⚠ 50일선 이탈: -4.5%</li><li>이평선 강한 상승 (50:0.126 / 200:0.603)</li><li>🟢 매출: 3Q 평균 11.4% QoQ (7.5% → 10.2% → 16.6%)</li><li>🟢 EPS: +149% YoY (강한 이익 성장)</li><li>재고 중립 (2.7% QoQ)</li><li>상승일 거래량 소폭 우위 (비율 1.16)</li><li>⚠ 상대강도 하락: -0.203 (SPY 대비 부진)</li><li>🟢 양호한 손익비: 3.1:1</li><li>진입 구간 이탈: 50일선 -4.5%</li><li>🟡 부분 패턴: Only 1 contraction(s) detected (need 2+)</li></ul>
+    <div class="block">⏸ 매수 보류 — Phase 1 (미너비니는 Phase 2만 매수)</div>
+  </div>
+</details>
+<details class="row buy">
+  <summary>
+    <div class="cols">
+      <div class="rank num">10</div>
+      <div class="tk">CRWD<span class="nm">CrowdStrike</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">6.98<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><span class="cnt">8/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:75.7%;background:var(--good)"></i><span class="mark" style="left:48.0%"></span><span class="txt num">95</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$207.39
+        <small>손절 $186.65</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$207.39</div></div><div><div class="pl">손절가</div><div class="pv stop num">$186.65</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$238.50</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$269.61</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:75%"></i></span><span class="cv num">30<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:97%"></i></span><span class="cv num">38.7<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:60%"></i></span><span class="cv num">9<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:50%"></i></span><span class="cv num">5<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:75%"></i></span><span class="cv num">7.5<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:86%"></i></span><span class="cv num">4.3<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 8/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit ok"><span class="ck">✓</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 -0.003 · 손익비 3.0:1 · 52주고가 대비 -5.5%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>강한 상승추세: 50일선 +12.2%</li><li>이평선 강한 상승 (50:0.616 / 200:0.262)</li><li>🟢 매출: 3Q 평균 5.8% QoQ (5.6% → 5.8% → 6.1%)</li><li>🟢 EPS: +125% YoY (강한 이익 성장)</li><li>상승일 거래량 소폭 우위 (비율 1.25)</li><li>중립 상대강도: -0.003</li><li>🟢 양호한 손익비: 3.0:1</li><li>🟢 52주 고가 근접: 고가 대비 5.5%</li></ul>
+    <div class="block pass">✅ 매수 적격 — Phase 2 · Trend Template 통과 · SEPA 임계값 충족</div>
+  </div>
+</details>
+<details class="row">
+  <summary>
+    <div class="cols">
+      <div class="rank num">11</div>
+      <div class="tk">PYPL<span class="nm">PayPal</span></div>
+      <div class="sectwrap"><span class="sect">금융</span></div>
+      <div class="momwrap mom num">6.12<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot"></i><i class="dot"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot"></i><span class="cnt">5/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:48.7%;background:#5eb894"></i><span class="mark" style="left:48.0%"></span><span class="txt num">61</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$59.78
+        <small>손절 $53.80</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$59.78</div></div><div><div class="pl">손절가</div><div class="pv stop num">$53.80</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$60.00</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$60.21</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:62%"></i></span><span class="cv num">25<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:50%"></i></span><span class="cv num">19.8<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:61%"></i></span><span class="cv num">6.1<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 5/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit no"><span class="ck">✕</span><span>150일선 &gt; 200일선</span></div><div class="crit no"><span class="ck">✕</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit no"><span class="ck">✕</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 +0.826 · 손익비 0.1:1 · 52주고가 대비 -23.9%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>강한 상승추세: 50일선 +24.1%</li><li>이평선 강한 상승 (50:0.475 / 200:-0.123)</li><li>다소 과열: 50일선 +24.1%</li><li>🟡 매출: 3Q 평균 1.1% QoQ (3.1% → -3.7% → 3.9%)</li><li>🔴 EPS: -3% YoY</li><li>상승일 거래량 소폭 우위 (비율 1.11)</li><li>✓ 강한 상대강도: 0.826 (SPY 대비 초과수익)</li><li>🔴 부족한 손익비: 0.1:1 (최소 2:1 필요)</li><li>진입 구간 이탈: 50일선 24.1%</li></ul>
+    <div class="block">⏸ 매수 보류 — Phase 1 (미너비니는 Phase 2만 매수)</div>
+  </div>
+</details>
+<details class="row buy">
+  <summary>
+    <div class="cols">
+      <div class="rank num">12</div>
+      <div class="tk">FTNT<span class="nm">Fortinet</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">5.99<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><span class="cnt">8/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:75.4%;background:var(--good)"></i><span class="mark" style="left:48.0%"></span><span class="txt num">94</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$160.11
+        <small>손절 $150.72</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$160.11</div></div><div><div class="pl">손절가</div><div class="pv stop num">$150.72</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$184.13</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$208.14</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:75%"></i></span><span class="cv num">30<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:84%"></i></span><span class="cv num">33.4<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">15<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:35%"></i></span><span class="cv num">3.5<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:78%"></i></span><span class="cv num">7.8<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:90%"></i></span><span class="cv num">4.5<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 8/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit ok"><span class="ck">✓</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 -0.092 · 손익비 5.1:1 · 52주고가 대비 -7.0%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>양호한 상승추세: 50일선 +5.2%</li><li>이평선 강한 상승 (50:0.619 / 200:0.368)</li><li>🟢 매출: 3Q 평균 6.1% QoQ (10.4% → -2.9% → 10.7%)</li><li>🟢 EPS: +44% YoY</li><li>⚠ 재고 급증 (15.3% QoQ — 수요 둔화 우려)</li><li>상승일 거래량 소폭 우위 (비율 1.28)</li><li>약한 상대강도: -0.092</li><li>🟢 탁월한 손익비: 5.1:1 (상승 $48.03 / 위험 $9.39)</li><li>🟢 52주 고가 근접: 고가 대비 7.0%</li></ul>
+    <div class="block pass">✅ 매수 적격 — Phase 2 · Trend Template 통과 · SEPA 임계값 충족</div>
+  </div>
+</details>
+<details class="row buy">
+  <summary>
+    <div class="cols">
+      <div class="rank num">13</div>
+      <div class="tk">BAX<span class="nm">Baxter International</span></div>
+      <div class="sectwrap"><span class="sect">헬스</span></div>
+      <div class="momwrap mom num">5.88<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><span class="cnt">8/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:69.7%;background:#5eb894"></i><span class="mark" style="left:48.0%"></span><span class="txt num">87</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$27.01
+        <small>손절 $24.31</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$27.01</div></div><div><div class="pl">손절가</div><div class="pv stop num">$24.31</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$31.06</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$35.11</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:62%"></i></span><span class="cv num">25<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:82%"></i></span><span class="cv num">32.7<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:60%"></i></span><span class="cv num">9<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:71%"></i></span><span class="cv num">7.1<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:66%"></i></span><span class="cv num">3.3<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 8/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit ok"><span class="ck">✓</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 +1.299 · 손익비 3.0:1 · 52주고가 대비 -10.0%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>강한 상승추세: 50일선 +23.2%</li><li>이평선 강한 상승 (50:0.601 / 200:0.029)</li><li>다소 과열: 50일선 +23.2%</li><li>🟡 매출: 3Q 평균 1.8% QoQ (4.9% → -9.2% → 9.6%)</li><li>🟢 EPS: +33% YoY</li><li>재고 중립 (-2.5% QoQ)</li><li>상승일 거래량 소폭 우위 (비율 1.21)</li><li>✓ 강한 상대강도: 1.299 (SPY 대비 초과수익)</li><li>🟡 수용 가능한 손익비: 3.0:1</li><li>🟢 52주 고가 근접: 고가 대비 10.0%</li></ul>
+    <div class="block pass">✅ 매수 적격 — Phase 2 · Trend Template 통과 · SEPA 임계값 충족</div>
+  </div>
+</details>
+<details class="row">
+  <summary>
+    <div class="cols">
+      <div class="rank num">14</div>
+      <div class="tk">IT<span class="nm">Gartner</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">5.46<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p3">P3 분산·과열</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot"></i><i class="dot"></i><i class="dot"></i><i class="dot on"></i><i class="dot on"></i><i class="dot"></i><i class="dot"></i><span class="cnt">3/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:49.3%;background:#5eb894"></i><span class="mark" style="left:48.0%"></span><span class="txt num">62</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$184.82
+        <small>손절 $166.34</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$184.82</div></div><div><div class="pl">손절가</div><div class="pv stop num">$166.34</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$—</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$183.84</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:25%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:78%"></i></span><span class="cv num">31<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:12%"></i></span><span class="cv num">0.6<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 3/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit no"><span class="ck">✕</span><span>150일선 &gt; 200일선</span></div><div class="crit no"><span class="ck">✕</span><span>200일선 1개월 이상 상승</span></div><div class="crit no"><span class="ck">✕</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit no"><span class="ck">✕</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit no"><span class="ck">✕</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 +1.569 · 52주고가 대비 -30.5%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>강한 상승추세: 50일선 +25.7%</li><li>⚠ 이평선 횡보 또는 하락</li><li>다소 과열: 50일선 +25.7%</li><li>🟡 매출: 3Q 평균 4.0% QoQ (15.0% → -13.8% → 10.9%)</li><li>🟢 EPS: +33% YoY</li><li>✓ 상승일 거래량 우위 (비율 1.65)</li><li>✓ 강한 상대강도: 1.569 (SPY 대비 초과수익)</li><li>🔴 52주 고가에서 이탈: 고가 대비 30.5% (주도주 아님)</li></ul>
+    <div class="block">⏸ 매수 보류 — Phase 3 (미너비니는 Phase 2만 매수)</div>
+  </div>
+</details>
+<details class="row buy">
+  <summary>
+    <div class="cols">
+      <div class="rank num">15</div>
+      <div class="tk">CRL<span class="nm">Charles River Laboratories</span></div>
+      <div class="sectwrap"><span class="sect">헬스</span></div>
+      <div class="momwrap mom num">5.29<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><span class="cnt">8/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:54.1%;background:#5eb894"></i><span class="mark" style="left:48.0%"></span><span class="txt num">68</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$265.51
+        <small>손절 $238.96</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$265.51</div></div><div><div class="pl">손절가</div><div class="pv stop num">$238.96</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$305.34</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$345.16</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:62%"></i></span><span class="cv num">25<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:25%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:60%"></i></span><span class="cv num">9<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:72%"></i></span><span class="cv num">3.6<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 8/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit ok"><span class="ck">✓</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 +0.428 · 손익비 3.0:1 · 52주고가 대비 -0.9%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>강한 상승추세: 50일선 +25.4%</li><li>이평선 강한 상승 (50:0.645 / 200:0.169)</li><li>다소 과열: 50일선 +25.4%</li><li>🔴 매출: 3Q 평균 -1.2% QoQ</li><li>🔴 EPS: -160% YoY</li><li>⚠ 재고 급증 (20.3% QoQ — 수요 둔화 우려)</li><li>✓ 상승일 거래량 우위 (비율 2.53)</li><li>✓ 강한 상대강도: 0.428 (SPY 대비 초과수익)</li><li>🟡 수용 가능한 손익비: 3.0:1</li><li>🟢 52주 고가권: 고가 대비 0.9% (피벗 존)</li></ul>
+    <div class="block pass">✅ 매수 적격 — Phase 2 · Trend Template 통과 · SEPA 임계값 충족</div>
+  </div>
+</details>
+<details class="row">
+  <summary>
+    <div class="cols">
+      <div class="rank num">16</div>
+      <div class="tk">MRVL<span class="nm">Marvell Technology</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">5.27<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot"></i><i class="dot on"></i><i class="dot"></i><i class="dot"></i><span class="cnt">5/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:59.4%;background:#5eb894"></i><span class="mark" style="left:48.0%"></span><span class="txt num">74</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$210.54
+        <small>손절 $189.49</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$210.54</div></div><div><div class="pl">손절가</div><div class="pv stop num">$189.49</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$255.55</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$300.56</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:50%"></i></span><span class="cv num">20<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:73%"></i></span><span class="cv num">29.2<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">15<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 5/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit no"><span class="ck">✕</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit no"><span class="ck">✕</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit no"><span class="ck">✕</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 -0.580 · 손익비 4.3:1 · 52주고가 대비 -36.2%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>⚠ 50일선 이탈: -12.4%</li><li>이평선 강한 상승 (50:0.184 / 200:0.412)</li><li>🟢 매출: 3Q 평균 6.4% QoQ (3.4% → 7.0% → 9.0%)</li><li>🔴 EPS: -80% YoY</li><li>재고 중립 (0.9% QoQ)</li><li>✓ 상승일 거래량 우위 (비율 1.62)</li><li>⚠ 상대강도 하락: -0.580 (SPY 대비 부진)</li><li>🟢 우수한 손익비: 4.3:1</li><li>진입 구간 이탈: 50일선 -12.4%</li></ul>
+    <div class="block">⏸ 매수 보류 — Phase 1 (미너비니는 Phase 2만 매수)</div>
+  </div>
+</details>
+<details class="row buy">
+  <summary>
+    <div class="cols">
+      <div class="rank num">17</div>
+      <div class="tk">GRMN<span class="nm">Garmin</span></div>
+      <div class="sectwrap"><span class="sect">소비재</span></div>
+      <div class="momwrap mom num">5.18<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><span class="cnt">8/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:72.5%;background:var(--good)"></i><span class="mark" style="left:48.0%"></span><span class="txt num">91</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$301.87
+        <small>손절 $271.68</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$301.87</div></div><div><div class="pl">손절가</div><div class="pv stop num">$271.68</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$347.15</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$392.43</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:62%"></i></span><span class="cv num">25<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:90%"></i></span><span class="cv num">36.1<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:60%"></i></span><span class="cv num">9<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:66%"></i></span><span class="cv num">6.6<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:78%"></i></span><span class="cv num">3.9<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 8/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit ok"><span class="ck">✓</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 +1.418 · 손익비 3.0:1 · 52주고가 대비 -2.6%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>강한 상승추세: 50일선 +21.8%</li><li>이평선 강한 상승 (50:0.213 / 200:0.029)</li><li>다소 과열: 50일선 +21.8%</li><li>🟢 매출: 3Q 평균 5.9% QoQ (20.0% → -17.5% → 15.3%)</li><li>🟢 EPS: +35% YoY</li><li>⚠ 재고 증가 (6.3% QoQ)</li><li>상승일 거래량 소폭 우위 (비율 1.16)</li><li>✓ 강한 상대강도: 1.418 (SPY 대비 초과수익)</li><li>🟢 양호한 손익비: 3.0:1</li><li>🟢 52주 고가권: 고가 대비 2.6% (피벗 존)</li></ul>
+    <div class="block pass">✅ 매수 적격 — Phase 2 · Trend Template 통과 · SEPA 임계값 충족</div>
+  </div>
+</details>
+<details class="row buy">
+  <summary>
+    <div class="cols">
+      <div class="rank num">18</div>
+      <div class="tk">NUE<span class="nm">Nucor</span></div>
+      <div class="sectwrap"><span class="sect">소재</span></div>
+      <div class="momwrap mom num">4.91<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><span class="cnt">8/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:82.2%;background:var(--good)"></i><span class="mark" style="left:48.0%"></span><span class="txt num">103</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$272.00
+        <small>손절 $244.80</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$272.00</div></div><div><div class="pl">손절가</div><div class="pv stop num">$244.80</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$312.80</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$353.60</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:75%"></i></span><span class="cv num">30<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">40<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:60%"></i></span><span class="cv num">9<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:92%"></i></span><span class="cv num">9.2<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:90%"></i></span><span class="cv num">4.5<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 8/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit ok"><span class="ck">✓</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 +0.912 · 손익비 3.0:1 · 52주고가 대비 -2.9%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>강한 상승추세: 50일선 +10.8%</li><li>이평선 강한 상승 (50:0.163 / 200:0.301)</li><li>🟡 매출: 3Q 평균 4.8% QoQ (0.8% → -9.8% → 23.5%)</li><li>🟢 EPS: +94% YoY (강한 이익 성장)</li><li>재고 중립 (3.3% QoQ)</li><li>✓ 상승일 거래량 우위 (비율 1.42)</li><li>✓ 강한 상대강도: 0.912 (SPY 대비 초과수익)</li><li>🟢 양호한 손익비: 3.0:1</li><li>🟢 52주 고가권: 고가 대비 2.9% (피벗 존)</li></ul>
+    <div class="block pass">✅ 매수 적격 — Phase 2 · Trend Template 통과 · SEPA 임계값 충족</div>
+  </div>
+</details>
+<details class="row">
+  <summary>
+    <div class="cols">
+      <div class="rank num">19</div>
+      <div class="tk">MSFT<span class="nm">Microsoft</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">4.87<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot"></i><i class="dot"></i><i class="dot"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot"></i><span class="cnt">4/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:48.0%;background:#5eb894"></i><span class="mark" style="left:48.0%"></span><span class="txt num">60</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$499.86
+        <small>손절 $449.87</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$499.86</div></div><div><div class="pl">손절가</div><div class="pv stop num">$449.87</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$503.22</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$506.59</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:25%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:75%"></i></span><span class="cv num">30<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">10<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 4/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit no"><span class="ck">✕</span><span>150일선 &gt; 200일선</span></div><div class="crit no"><span class="ck">✕</span><span>200일선 1개월 이상 상승</span></div><div class="crit no"><span class="ck">✕</span><span>50일선 &gt; 150일선</span></div><div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit no"><span class="ck">✕</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 +1.301 · 손익비 0.1:1 · 52주고가 대비 -9.2%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>강한 상승추세: 50일선 +23.3%</li><li>⚠ 이평선 횡보 또는 하락</li><li>다소 과열: 50일선 +23.3%</li><li>🟢 매출: 3Q 평균 5.1% QoQ (4.6% → 2.0% → 8.6%)</li><li>🟢 EPS: +32% YoY</li><li>⚠ 재고 증가 (14.6% QoQ)</li><li>✓ 상승일 거래량 우위 (비율 1.61)</li><li>✓ 강한 상대강도: 1.301 (SPY 대비 초과수익)</li><li>🔴 부족한 손익비: 0.1:1 (최소 2:1 필요)</li><li>진입 구간 이탈: 50일선 23.3%</li></ul>
+    <div class="block">⏸ 매수 보류 — Phase 1 (미너비니는 Phase 2만 매수)</div>
+  </div>
+</details>
+<details class="row">
+  <summary>
+    <div class="cols">
+      <div class="rank num">20</div>
+      <div class="tk">AMD<span class="nm">Advanced Micro Devices</span></div>
+      <div class="sectwrap"><span class="sect">IT</span></div>
+      <div class="momwrap mom num">4.69<small>모멘텀</small></div>
+      <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
+      <div class="dotswrap"><div class="dots"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot"></i><i class="dot on"></i><i class="dot on"></i><i class="dot"></i><span class="cnt">6/8</span></div></div>
+      <div class="barwrap"><div class="bar"><i style="width:63.0%;background:#5eb894"></i><span class="mark" style="left:48.0%"></span><span class="txt num">79</span></div><div class="barnote">/125 · 매수선 60</div></div>
+      <div class="pxwrap px num">$489.28
+        <small>손절 $440.35</small></div>
+    </div>
+  </summary>
+  <div class="detail">
+    <div class="plan"><div><div class="pl">현재가</div><div class="pv num">$489.28</div></div><div><div class="pl">손절가</div><div class="pv stop num">$440.35</div></div><div><div class="pl">1차 익절</div><div class="pv mid num">$566.10</div></div><div><div class="pl">최종 익절</div><div class="pv tgt num">$642.91</div></div></div>
+    <div class="dgrid">
+      <div>
+        <div class="dtitle">SEPA 점수 구성</div>
+        <div class="comp"><span class="cn">추세 구조</span><span class="cb"><i style="width:63%"></i></span><span class="cv num">25.3<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">펀더멘털</span><span class="cb"><i style="width:100%"></i></span><span class="cv num">40<small style="color:var(--ink3)">/40</small></span></div><div class="comp"><span class="cn">손익비</span><span class="cb"><i style="width:65%"></i></span><span class="cv num">9.8<small style="color:var(--ink3)">/15</small></span></div><div class="comp"><span class="cn">상대강도</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">거래량</span><span class="cb"><i style="width:35%"></i></span><span class="cv num">3.5<small style="color:var(--ink3)">/10</small></span></div><div class="comp"><span class="cn">진입 품질</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div><div class="comp"><span class="cn">VCP</span><span class="cb"><i style="width:0%"></i></span><span class="cv num">0<small style="color:var(--ink3)">/5</small></span></div>
+      </div>
+      <div>
+        <div class="dtitle">미너비니 트렌드 템플릿 6/8</div>
+        <div class="crit ok"><span class="ck">✓</span><span>주가 &gt; 150일선 · 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>150일선 &gt; 200일선</span></div><div class="crit ok"><span class="ck">✓</span><span>200일선 1개월 이상 상승</span></div><div class="crit ok"><span class="ck">✓</span><span>50일선 &gt; 150일선</span></div><div class="crit no"><span class="ck">✕</span><span>주가 &gt; 50일선</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 저가 대비 +30% 이상</span></div><div class="crit ok"><span class="ck">✓</span><span>52주 고가 대비 -25% 이내</span></div><div class="crit no"><span class="ck">✕</span><span>Phase 2 (확정 상승추세)</span></div>
+      </div>
+    </div>
+    <div class="dtitle" style="margin-top:16px">주요 지표</div><div style="font-size:12.5px;color:var(--ink2)">RS 기울기 -0.772 · 손익비 3.1:1 · 52주고가 대비 -16.3%</div>
+    <div class="dtitle" style="margin-top:16px">채점 근거</div>
+    <ul class="why"><li>⚠ 50일선 이탈: -4.9%</li><li>이평선 강한 상승 (50:0.317 / 200:0.508)</li><li>🟢 매출: 3Q 평균 10.4% QoQ (20.3% → 11.1% → -0.2%)</li><li>🟢 EPS: +91% YoY (강한 이익 성장)</li><li>재고 중립 (1.6% QoQ)</li><li>⚠ 하락일 거래량 우위 (비율 0.85 — 분산 매도)</li><li>⚠ 상대강도 하락: -0.772 (SPY 대비 부진)</li><li>🟢 양호한 손익비: 3.1:1</li><li>진입 구간 이탈: 50일선 -4.9%</li><li>🟡 부분 패턴: 2 contractions: 14.8% → 19.9%</li></ul>
+    <div class="block">⏸ 매수 보류 — Phase 1 (미너비니는 Phase 2만 매수)</div>
+  </div>
+</details>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p><b>랭킹 기준</b> — 가중 모멘텀 = 12×1개월 + 4×3개월 + 2×6개월 + 1×12개월 수익률의 가중합. S&amp;P 500 전 종목을 매일 재계산합니다.</p>
+    <p><b>SEPA 점수</b> — 추세 40 · 펀더멘털 40 · 손익비 15 · 상대강도 10 · 거래량 10 · 진입 5 · VCP 5 (총 125점).
+       마크 미너비니 <i>Trade Like a Stock Market Wizard</i>의 트렌드 템플릿과 SEPA 방법론 기반.</p>
+    <p><b>매수 적격</b> — Phase 2 · 트렌드 템플릿 7/8 이상 · SEPA 60점 이상을 모두 만족한 경우에만 표시됩니다.
+       모멘텀 상위라도 대부분은 여기서 걸러집니다.</p>
+    <p style="margin-top:12px">갱신 2026-08-07 16:14 · 데이터 yfinance / Wikipedia</p>
+    <p style="color:#4a5568">본 페이지는 정보 제공 목적이며 투자 자문이 아닙니다. 과거 성과는 미래 수익을 보장하지 않습니다.</p>
+  </div>
+</footer>
+
+</body>
+</html>
