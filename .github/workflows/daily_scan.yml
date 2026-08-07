@@ -2,8 +2,10 @@ name: Daily Momentum x SEPA Scan
 
 on:
   schedule:
-    # 12:00 UTC = 밤 9시 KST (미국장 마감 후, 평일)
-    - cron: '0 12 * * 1-5'
+    # 22:00 UTC = 아침 7시 KST (다음날). 미국장 마감(20:00 UTC 여름 /
+    # 21:00 UTC 겨울) 1~2시간 뒤라 당일 종가가 확정된 상태로 돌아간다.
+    # 월~금 UTC 실행 = 화~토 아침 KST 수신. KST는 서머타임이 없어 항상 7시.
+    - cron: '0 22 * * 1-5'
 
   workflow_dispatch:
     inputs:
@@ -77,10 +79,14 @@ jobs:
 
       # 생성물만 정확히 스테이징한다. `git add -A`를 쓰지 않는 이유는
       # 실행 중 만들어진 캐시·임시파일이 딸려 올라가는 것을 막기 위해서다.
+      #
+      # 커밋 메시지에는 러너 날짜가 아니라 데이터 기준일(scan_date)을 쓴다.
+      # 둘은 다를 수 있다 — 미국 휴장일에 돌면 직전 거래일 종가가 잡힌다.
       - name: Commit and push results
-        env:
-          SCAN_DATE: ${{ steps.date.outputs.date }}
         run: |
+          SCAN_DATE=$(python -c "import json; print(json.load(open('data/daily/latest.json', encoding='utf-8'))['scan_date'])")
+          echo "데이터 기준일: $SCAN_DATE"
+
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
@@ -98,7 +104,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: scan-${{ steps.date.outputs.date }}
+          name: scan-${{ steps.date.outputs.date }}-run${{ github.run_number }}
           path: |
             data/daily/latest.json
             docs/index.html
