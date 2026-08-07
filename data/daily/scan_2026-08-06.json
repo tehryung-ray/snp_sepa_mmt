@@ -1,6 +1,6 @@
 {
   "scan_date": "2026-08-06",
-  "generated_at": "2026-08-07T16:14:18",
+  "generated_at": "2026-08-07T07:35:39",
   "universe_size": 501,
   "top_n": 20,
   "momentum_weights": {
@@ -832,7 +832,7 @@
       "phase": 3,
       "phase_name": "Distribution/Top",
       "phase_confidence": 100,
-      "sepa_score": 61.6,
+      "sepa_score": 40.6,
       "is_buy": false,
       "blocked_reason": "Phase 3 (미너비니는 Phase 2만 매수)",
       "template_score": 37,
@@ -852,7 +852,7 @@
       "passes_template": false,
       "components": {
         "trend": 10.0,
-        "fundamental": 31.0,
+        "fundamental": 10.0,
         "risk_reward": 0.0,
         "relative_strength": 10,
         "volume": 10,
@@ -876,7 +876,7 @@
         "강한 상승추세: 50일선 +25.7%",
         "⚠ 이평선 횡보 또는 하락",
         "다소 과열: 50일선 +25.7%",
-        "🟡 매출: 3Q 평균 4.0% QoQ (15.0% → -13.8% → 10.9%)",
+        "🔴 매출: 최근 분기 -13.8% 감소 (3Q 평균 -2.8%, 감점)",
         "🟢 EPS: +33% YoY",
         "✓ 상승일 거래량 우위 (비율 1.65)",
         "✓ 강한 상대강도: 1.569 (SPY 대비 초과수익)",
