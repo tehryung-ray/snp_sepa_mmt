@@ -2,6 +2,18 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
-.env
-data/price_cache/
 .DS_Store
+
+# 캐시
+data/price_cache/
+
+# 자격증명 — 이 저장소는 공개이므로 어떤 형태의 비밀도 커밋되지 않게 한다
+.env
+.env.*
+env
+*.pem
+*.key
+*.p12
+*credentials*
+*secret*
+*.token

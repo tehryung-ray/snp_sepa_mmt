@@ -8,17 +8,26 @@ on:
   workflow_dispatch:
     inputs:
       top_n:
-        description: 'SEPA 분석 대상 상위 종목 수'
+        description: 'SEPA 분석 대상 상위 종목 수 (1~100)'
         required: false
         type: string
         default: '20'
 
+# 기본은 무권한. 필요한 잡에서만 명시적으로 올린다.
+permissions: {}
+
+# 동시 실행 방지 — 두 런이 같은 브랜치에 push 하며 충돌하는 것을 막는다.
+concurrency:
+  group: daily-scan-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   scan-and-publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     permissions:
-      contents: write   # docs/ + data/ 커밋에 필요
+      contents: write   # docs/ + data/ 커밋·푸시에만 사용
 
     steps:
       - name: Checkout
@@ -28,7 +37,24 @@ jobs:
 
       - name: Get current date
         id: date
-        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+        run: echo "date=$(date +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+
+      # workflow_dispatch 입력은 신뢰하지 않는다.
+      # env 변수로 받아(셸 인젝션 차단) 숫자·범위를 검증한 뒤에만 사용한다.
+      - name: Validate input
+        id: cfg
+        env:
+          RAW_TOP_N: ${{ github.event.inputs.top_n || '20' }}
+        run: |
+          if ! printf '%s' "$RAW_TOP_N" | grep -Eq '^[0-9]+$'; then
+            echo "::error::top_n 은 숫자여야 합니다: $RAW_TOP_N"
+            exit 1
+          fi
+          if [ "$RAW_TOP_N" -lt 1 ] || [ "$RAW_TOP_N" -gt 100 ]; then
+            echo "::error::top_n 은 1~100 범위여야 합니다: $RAW_TOP_N"
+            exit 1
+          fi
+          echo "top_n=$RAW_TOP_N" >> "$GITHUB_OUTPUT"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -43,35 +69,30 @@ jobs:
 
       - name: Run momentum x SEPA scan
         env:
-          TOP_N: ${{ github.event.inputs.top_n || '20' }}
+          TOP_N: ${{ steps.cfg.outputs.top_n }}
         run: |
-          echo "=== S&P 500 Momentum x SEPA Scan ==="
-          echo "  Top N: $TOP_N"
+          echo "=== S&P 500 Momentum x SEPA Scan (top $TOP_N) ==="
           mkdir -p data/daily docs
           python run_daily.py --top "$TOP_N"
 
-      - name: Commit results
-        id: commit
+      # 생성물만 정확히 스테이징한다. `git add -A`를 쓰지 않는 이유는
+      # 실행 중 만들어진 캐시·임시파일이 딸려 올라가는 것을 막기 위해서다.
+      - name: Commit and push results
+        env:
+          SCAN_DATE: ${{ steps.date.outputs.date }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          git add docs/ data/daily/
+          git add docs/index.html data/daily/
 
           if git diff --staged --quiet; then
-            echo "No changes to commit"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            git commit -m "scan: momentum x SEPA - ${{ steps.date.outputs.date }}"
-            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "변경 없음 — 커밋 생략"
+            exit 0
           fi
 
-      - name: Push changes
-        if: steps.commit.outputs.has_changes == 'true'
-        uses: ad-m/github-push-action@v0.8.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
+          git commit -m "scan: momentum x SEPA - $SCAN_DATE"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Upload artifacts
         if: always()
