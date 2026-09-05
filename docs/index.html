@@ -79,6 +79,13 @@ h1{font-size:clamp(21px,4.4vw,29px);font-weight:800;letter-spacing:-.02em;text-w
 .tk{font-size:16px;font-weight:800;letter-spacing:-.01em}
 .tk .nm{display:block;font-size:11px;font-weight:400;color:var(--ink3);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 티커 → 토스증권 종목 페이지 */
+.tk a.toss{color:inherit;text-decoration:none;border-bottom:1px dashed #46587a}
+.tk a.toss:after{content:'↗';font-size:9px;margin-left:3px;vertical-align:super;
+  color:var(--ink3);font-weight:400}
+.tk a.toss:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.tk a.toss:hover:after{color:var(--accent)}
+.tk a.toss:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
 .sect{
   display:inline-block;font-size:11px;font-weight:700;padding:2.5px 7px;
   border-radius:5px;background:#22304a;color:#a9bdd9;white-space:nowrap
@@ -241,7 +248,7 @@ footer b{color:var(--ink2)}
   <section class="sec">
     <div class="sec-head">
       <h2>모멘텀 랭킹 × SEPA 점수</h2>
-      <span class="sec-note">행을 눌러 점수 구성과 8개 조건을 펼쳐 보세요</span>
+      <span class="sec-note">행을 눌러 점수 구성과 8개 조건을 펼쳐 보세요 · 티커 ↗ 를 누르면 토스증권으로 이동합니다</span>
     </div>
 
     <div class="cols colhead">
@@ -254,7 +261,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">1</div>
-      <div class="tk">MRNA<span class="nm">Moderna</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/MRNA"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 MRNA 보기">MRNA</a><span
+           class="nm">Moderna</span></div>
       <div class="sectwrap"><span class="sect">헬스</span></div>
       <div class="momwrap mom num">37.24<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
@@ -286,7 +296,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">2</div>
-      <div class="tk">SNDK<span class="nm">Sandisk</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/SNDK"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 SNDK 보기">SNDK</a><span
+           class="nm">Sandisk</span></div>
       <div class="sectwrap"><span class="sect">IT</span></div>
       <div class="momwrap mom num">36.49<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
@@ -318,7 +331,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">3</div>
-      <div class="tk">MU<span class="nm">Micron Technology</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/MU"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 MU 보기">MU</a><span
+           class="nm">Micron Technology</span></div>
       <div class="sectwrap"><span class="sect">IT</span></div>
       <div class="momwrap mom num">13.24<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
@@ -350,7 +366,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">4</div>
-      <div class="tk">DELL<span class="nm">Dell Technologies</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/DELL"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 DELL 보기">DELL</a><span
+           class="nm">Dell Technologies</span></div>
       <div class="sectwrap"><span class="sect">IT</span></div>
       <div class="momwrap mom num">12.08<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
@@ -382,7 +401,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">5</div>
-      <div class="tk">MPC<span class="nm">Marathon Petroleum</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/MPC"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 MPC 보기">MPC</a><span
+           class="nm">Marathon Petroleum</span></div>
       <div class="sectwrap"><span class="sect">에너지</span></div>
       <div class="momwrap mom num">8.34<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
@@ -414,7 +436,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">6</div>
-      <div class="tk">HOOD<span class="nm">Robinhood Markets</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/HOOD"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 HOOD 보기">HOOD</a><span
+           class="nm">Robinhood Markets</span></div>
       <div class="sectwrap"><span class="sect">금융</span></div>
       <div class="momwrap mom num">7.43<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
@@ -446,7 +471,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">7</div>
-      <div class="tk">VLO<span class="nm">Valero Energy</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/VLO"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 VLO 보기">VLO</a><span
+           class="nm">Valero Energy</span></div>
       <div class="sectwrap"><span class="sect">에너지</span></div>
       <div class="momwrap mom num">7.27<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
@@ -478,7 +506,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">8</div>
-      <div class="tk">LITE<span class="nm">Lumentum</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/LITE"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 LITE 보기">LITE</a><span
+           class="nm">Lumentum</span></div>
       <div class="sectwrap"><span class="sect">IT</span></div>
       <div class="momwrap mom num">7.07<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
@@ -510,7 +541,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">9</div>
-      <div class="tk">CRM<span class="nm">Salesforce</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/CRM"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 CRM 보기">CRM</a><span
+           class="nm">Salesforce</span></div>
       <div class="sectwrap"><span class="sect">IT</span></div>
       <div class="momwrap mom num">6.90<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p3">P3 분산·과열</span></div>
@@ -542,7 +576,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">10</div>
-      <div class="tk">PSX<span class="nm">Phillips 66</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/PSX"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 PSX 보기">PSX</a><span
+           class="nm">Phillips 66</span></div>
       <div class="sectwrap"><span class="sect">에너지</span></div>
       <div class="momwrap mom num">6.69<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
@@ -574,7 +611,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">11</div>
-      <div class="tk">STX<span class="nm">Seagate Technology</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/STX"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 STX 보기">STX</a><span
+           class="nm">Seagate Technology</span></div>
       <div class="sectwrap"><span class="sect">IT</span></div>
       <div class="momwrap mom num">6.44<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
@@ -606,7 +646,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">12</div>
-      <div class="tk">VEEV<span class="nm">Veeva Systems</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/VEEV"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 VEEV 보기">VEEV</a><span
+           class="nm">Veeva Systems</span></div>
       <div class="sectwrap"><span class="sect">헬스</span></div>
       <div class="momwrap mom num">6.36<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
@@ -638,7 +681,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">13</div>
-      <div class="tk">WDC<span class="nm">Western Digital</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/WDC"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 WDC 보기">WDC</a><span
+           class="nm">Western Digital</span></div>
       <div class="sectwrap"><span class="sect">IT</span></div>
       <div class="momwrap mom num">6.06<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
@@ -670,7 +716,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">14</div>
-      <div class="tk">MRVL<span class="nm">Marvell Technology</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/MRVL"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 MRVL 보기">MRVL</a><span
+           class="nm">Marvell Technology</span></div>
       <div class="sectwrap"><span class="sect">IT</span></div>
       <div class="momwrap mom num">5.63<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
@@ -702,7 +751,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">15</div>
-      <div class="tk">CRL<span class="nm">Charles River Laboratories</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/CRL"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 CRL 보기">CRL</a><span
+           class="nm">Charles River Laboratories</span></div>
       <div class="sectwrap"><span class="sect">헬스</span></div>
       <div class="momwrap mom num">5.49<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
@@ -734,7 +786,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">16</div>
-      <div class="tk">IQV<span class="nm">IQVIA</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/IQV"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 IQV 보기">IQV</a><span
+           class="nm">IQVIA</span></div>
       <div class="sectwrap"><span class="sect">헬스</span></div>
       <div class="momwrap mom num">5.19<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
@@ -766,7 +821,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">17</div>
-      <div class="tk">ABNB<span class="nm">Airbnb</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/ABNB"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 ABNB 보기">ABNB</a><span
+           class="nm">Airbnb</span></div>
       <div class="sectwrap"><span class="sect">소비재</span></div>
       <div class="momwrap mom num">5.03<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
@@ -798,7 +856,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">18</div>
-      <div class="tk">AMD<span class="nm">Advanced Micro Devices</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/AMD"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 AMD 보기">AMD</a><span
+           class="nm">Advanced Micro Devices</span></div>
       <div class="sectwrap"><span class="sect">IT</span></div>
       <div class="momwrap mom num">4.72<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
@@ -830,7 +891,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">19</div>
-      <div class="tk">HPQ<span class="nm">HP Inc.</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/HPQ"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 HPQ 보기">HPQ</a><span
+           class="nm">HP Inc.</span></div>
       <div class="sectwrap"><span class="sect">IT</span></div>
       <div class="momwrap mom num">4.70<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p2">P2 상승추세</span></div>
@@ -862,7 +926,10 @@ footer b{color:var(--ink2)}
   <summary>
     <div class="cols">
       <div class="rank num">20</div>
-      <div class="tk">NEM<span class="nm">Newmont</span></div>
+      <div class="tk"><a class="toss" href="https://tossinvest.com/stocks/NEM"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 NEM 보기">NEM</a><span
+           class="nm">Newmont</span></div>
       <div class="sectwrap"><span class="sect">소재</span></div>
       <div class="momwrap mom num">4.70<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase p1">P1 베이스</span></div>
@@ -901,10 +968,19 @@ footer b{color:var(--ink2)}
        마크 미너비니 <i>Trade Like a Stock Market Wizard</i>의 트렌드 템플릿과 SEPA 방법론 기반.</p>
     <p><b>매수 적격</b> — Phase 2 · 트렌드 템플릿 7/8 이상 · SEPA 60점 이상을 모두 만족한 경우에만 표시됩니다.
        모멘텀 상위라도 대부분은 여기서 걸러집니다.</p>
-    <p style="margin-top:12px">갱신 2026-09-04 23:50 · 데이터 yfinance / Wikipedia</p>
+    <p><b>종목 코드</b> — 티커를 누르면 토스증권 해당 종목 페이지가 새 탭으로 열립니다. 행의 나머지 부분을 누르면 상세가 펼쳐집니다.</p>
+    <p style="margin-top:12px">갱신 2026-09-05 13:52 · 데이터 yfinance / Wikipedia</p>
     <p style="color:#4a5568">본 페이지는 정보 제공 목적이며 투자 자문이 아닙니다. 과거 성과는 미래 수익을 보장하지 않습니다.</p>
   </div>
 </footer>
+
+<script>
+// 티커 링크는 <summary> 안에 있어, 클릭이 그대로 버블링되면 행까지 함께
+// 펼쳐진다. 링크 클릭만 따로 처리해 토글을 막는다.
+document.querySelectorAll('a.toss').forEach(function (el) {
+  el.addEventListener('click', function (e) { e.stopPropagation(); });
+});
+</script>
 
 </body>
 </html>

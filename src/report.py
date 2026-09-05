@@ -9,6 +9,7 @@
 import html
 from datetime import datetime
 from typing import Dict, List
+from urllib.parse import quote
 
 from .sepa import CRITERIA_LABELS, COMPONENT_MAX, COMPONENT_LABELS
 
@@ -93,6 +94,13 @@ h1{font-size:clamp(21px,4.4vw,29px);font-weight:800;letter-spacing:-.02em;text-w
 .tk{font-size:16px;font-weight:800;letter-spacing:-.01em}
 .tk .nm{display:block;font-size:11px;font-weight:400;color:var(--ink3);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 티커 → 토스증권 종목 페이지 */
+.tk a.toss{color:inherit;text-decoration:none;border-bottom:1px dashed #46587a}
+.tk a.toss:after{content:'↗';font-size:9px;margin-left:3px;vertical-align:super;
+  color:var(--ink3);font-weight:400}
+.tk a.toss:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.tk a.toss:hover:after{color:var(--accent)}
+.tk a.toss:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
 .sect{
   display:inline-block;font-size:11px;font-weight:700;padding:2.5px 7px;
   border-radius:5px;background:#22304a;color:#a9bdd9;white-space:nowrap
@@ -214,6 +222,17 @@ def _esc(s) -> str:
     return html.escape(str(s if s is not None else ""))
 
 
+def _toss_url(ticker: str) -> str:
+    """토스증권 종목 페이지 URL.
+
+    토스는 원본 표기(점)를 쓴다: BRK.B ✓ / BRK-B ✗ / BRKB ✗
+    universe.py 가 yfinance 용으로 `.` → `-` 변환을 하므로 여기서 되돌린다.
+    미국 티커에 고유 하이픈은 없으므로 역변환은 정확하다.
+    """
+    symbol = ticker.replace("-", ".").upper()
+    return f"https://tossinvest.com/stocks/{quote(symbol, safe='.')}"
+
+
 def _fmt(v, digits=2, dash="—"):
     if v is None:
         return dash
@@ -321,7 +340,10 @@ def _row(r: Dict, threshold: int, max_score: int) -> str:
   <summary>
     <div class="cols">
       <div class="rank num">{r["rank"]}</div>
-      <div class="tk">{_esc(r["ticker"])}<span class="nm">{_esc(r["name"])}</span></div>
+      <div class="tk"><a class="toss" href="{_toss_url(r["ticker"])}"
+           target="_blank" rel="noopener noreferrer"
+           title="토스증권에서 {_esc(r["ticker"])} 보기">{_esc(r["ticker"])}</a><span
+           class="nm">{_esc(r["name"])}</span></div>
       <div class="sectwrap"><span class="sect">{_esc(r["sector"])}</span></div>
       <div class="momwrap mom num">{_fmt(r["momentum_score"])}<small>모멘텀</small></div>
       <div class="phasewrap"><span class="phase {phase_cls}">P{r["phase"]} {phase_label}</span></div>
@@ -431,7 +453,7 @@ def build_html(data: Dict) -> str:
   <section class="sec">
     <div class="sec-head">
       <h2>모멘텀 랭킹 × SEPA 점수</h2>
-      <span class="sec-note">행을 눌러 점수 구성과 8개 조건을 펼쳐 보세요</span>
+      <span class="sec-note">행을 눌러 점수 구성과 8개 조건을 펼쳐 보세요 · 티커 ↗ 를 누르면 토스증권으로 이동합니다</span>
     </div>
 
     <div class="cols colhead">
@@ -451,10 +473,19 @@ def build_html(data: Dict) -> str:
        마크 미너비니 <i>Trade Like a Stock Market Wizard</i>의 트렌드 템플릿과 SEPA 방법론 기반.</p>
     <p><b>매수 적격</b> — Phase 2 · 트렌드 템플릿 7/8 이상 · SEPA {threshold}점 이상을 모두 만족한 경우에만 표시됩니다.
        모멘텀 상위라도 대부분은 여기서 걸러집니다.</p>
+    <p><b>종목 코드</b> — 티커를 누르면 토스증권 해당 종목 페이지가 새 탭으로 열립니다. 행의 나머지 부분을 누르면 상세가 펼쳐집니다.</p>
     <p style="margin-top:12px">갱신 {now} · 데이터 yfinance / Wikipedia</p>
     <p style="color:#4a5568">본 페이지는 정보 제공 목적이며 투자 자문이 아닙니다. 과거 성과는 미래 수익을 보장하지 않습니다.</p>
   </div>
 </footer>
+
+<script>
+// 티커 링크는 <summary> 안에 있어, 클릭이 그대로 버블링되면 행까지 함께
+// 펼쳐진다. 링크 클릭만 따로 처리해 토글을 막는다.
+document.querySelectorAll('a.toss').forEach(function (el) {{
+  el.addEventListener('click', function (e) {{ e.stopPropagation(); }});
+}});
+</script>
 
 </body>
 </html>"""
