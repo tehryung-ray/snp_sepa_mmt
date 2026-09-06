@@ -60,6 +60,21 @@ logging.getLogger("yfinance").setLevel(logging.ERROR)
 # Phase/템플릿/VCP 계산에 필요한 최소 히스토리 (252일 52주고가 + 200일선 + VCP 325일)
 WINDOW = 400
 
+# 청산 방식 — 백테스트 전용. 라이브 스크리너(src/sepa.py)는 건드리지 않는다.
+#
+# 기존(target)은 Phase 2 목표가를 매수가×1.30 으로 고정하고 그 지점에서 전량
+# 익절한다. 상승장에서 이익만 +30% 에 잘리고 손실은 전부 받는 비대칭이
+# 벤치마크 대비 드래그로 작용했다. 아래 세 방식은 고정 목표가를 없애고
+# 추세가 꺾일 때까지 보유한다. 초기 손절가(SEPA 산출)는 어느 방식에서든
+# 하한으로 유지된다.
+EXIT_MODES = {
+    "target":    "고정 익절 — 1차 50% 후 +30% 목표가 전량 (기존)",
+    "ma50":      "50일선 종가 이탈 시 전량 (고정 목표가 없음)",
+    "trail20":   "고점 대비 −20% 추적손절 (고정 목표가 없음)",
+    "half_ma50": "1차 익절 50% 후 나머지는 50일선 이탈까지 보유",
+}
+TRAIL_PCT = 0.20
+
 
 # ─────────────────────────────────────────────────────────────────────
 # 가격 캐시
@@ -153,15 +168,37 @@ def evaluate_candidates(date, prices, close, mom_row, spy_close,
 # 포트폴리오 시뮬레이션
 # ─────────────────────────────────────────────────────────────────────
 
-def run_backtest(prices, close, mom, spy_close, trading_days,
+def run_backtest(prices, close, mom, spy_close, trading_days, sma50,
                  max_positions=5, top_n=20, initial_capital=100_000,
-                 template_min=7, threshold=60, commission=0.0005):
-    """일 단위 청산 점검 + 주 단위 신규 진입."""
+                 template_min=7, threshold=60, commission=0.0005,
+                 exit_mode="target"):
+    """일 단위 청산 점검 + 주 단위 신규 진입.
+
+    exit_mode 는 EXIT_MODES 참조. 어느 방식이든 초기 손절가는 하한으로 남는다.
+    """
+    use_half = exit_mode in ("target", "half_ma50")     # 1차 50% 익절 사용
+    use_target = exit_mode == "target"                  # 고정 목표가 전량 익절
+    use_ma = exit_mode in ("ma50", "half_ma50")         # 50일선 종가 이탈
+    use_trail = exit_mode == "trail20"                  # 고점 대비 추적손절
+
     cash = float(initial_capital)
     positions = {}      # ticker -> dict
     trades = []
     equity_curve = []
     signal_cache = []   # 직전 리밸런싱의 적격 종목 (T+1 시가 체결용)
+
+    def _close_out(ticker, pos, px, date, action):
+        nonlocal cash
+        cash += pos["shares"] * px * (1 - commission)
+        trades.append({
+            "ticker": ticker, "action": action,
+            "entry_date": pos["entry_date"], "exit_date": date,
+            "entry": pos["entry"], "exit": px, "shares": pos["shares"],
+            "pnl_pct": (px / pos["entry"] - 1) * 100,
+            "half_sold": pos["half_sold"],
+            "days": (date - pos["entry_date"]).days,
+        })
+        del positions[ticker]
 
     for i, date in enumerate(trading_days):
 
@@ -173,28 +210,28 @@ def run_backtest(prices, close, mom, spy_close, trading_days,
                 continue
             row = bar.iloc[-1]
             high, low = float(row["High"]), float(row["Low"])
-            open_px = float(row["Open"])
+            open_px, close_px = float(row["Open"]), float(row["Close"])
+
+            # 전일 종가에 확정된 이탈 신호를 오늘 시가에 체결 (T+1 규율)
+            if pos.get("pending_exit"):
+                _close_out(ticker, pos, open_px, date, pos["pending_exit"])
+                continue
+
+            # 추적손절선 갱신 — 고점은 항상 추적한다
+            pos["high_water"] = max(pos["high_water"], high)
+            if use_trail:
+                pos["stop"] = max(pos["stop"], pos["high_water"] * (1 - TRAIL_PCT))
 
             # 손절 우선 (보수적 가정)
             # 갭하락으로 손절선을 뛰어넘으면 실제 체결은 시가다. min() 으로 처리하지
             # 않으면 손실을 과소평가하게 된다.
             if low <= pos["stop"]:
-                px = min(open_px, pos["stop"])
-                cash += pos["shares"] * px * (1 - commission)
-                trades.append({
-                    "ticker": ticker, "action": "STOP",
-                    "entry_date": pos["entry_date"], "exit_date": date,
-                    "entry": pos["entry"], "exit": px, "shares": pos["shares"],
-                    "pnl_pct": (px / pos["entry"] - 1) * 100,
-                    "half_sold": pos["half_sold"],
-                    "days": (date - pos["entry_date"]).days,
-                })
-                del positions[ticker]
+                _close_out(ticker, pos, min(open_px, pos["stop"]), date, "STOP")
                 continue
 
             # 1차 익절 (50% 매도 + 손절가를 매수가로 상향)
             # 갭상승 시엔 시가가 더 유리하므로 max() — 익절은 갭이 이득이다.
-            if not pos["half_sold"] and high >= pos["mid"]:
+            if use_half and not pos["half_sold"] and high >= pos["mid"]:
                 half = pos["shares"] / 2
                 fill = max(open_px, pos["mid"])
                 cash += half * fill * (1 - commission)
@@ -208,21 +245,19 @@ def run_backtest(prices, close, mom, spy_close, trading_days,
                 })
                 pos["shares"] -= half
                 pos["half_sold"] = True
-                pos["stop"] = pos["entry"]      # 본전으로 손절가 이동
+                pos["stop"] = max(pos["stop"], pos["entry"])   # 본전으로 상향
 
-            # 최종 익절
-            if pos["half_sold"] and high >= pos["target"]:
-                px = max(open_px, pos["target"])
-                cash += pos["shares"] * px * (1 - commission)
-                trades.append({
-                    "ticker": ticker, "action": "TARGET",
-                    "entry_date": pos["entry_date"], "exit_date": date,
-                    "entry": pos["entry"], "exit": px, "shares": pos["shares"],
-                    "pnl_pct": (px / pos["entry"] - 1) * 100,
-                    "half_sold": True,
-                    "days": (date - pos["entry_date"]).days,
-                })
-                del positions[ticker]
+            # 고정 목표가 전량 익절 (기존 방식에서만)
+            if use_target and pos["half_sold"] and high >= pos["target"]:
+                _close_out(ticker, pos, max(open_px, pos["target"]), date, "TARGET")
+                continue
+
+            # 50일선 종가 이탈 — 장중 스톱이 아니라 종가 확정 신호이므로
+            # 오늘 종가에 판정하고 다음 거래일 시가에 체결한다.
+            if use_ma:
+                ma = sma50.at[date, ticker] if ticker in sma50.columns else np.nan
+                if pd.notna(ma) and close_px < ma:
+                    pos["pending_exit"] = "MA50"
 
         # ── 2) 직전 리밸런싱 신호를 오늘 시가에 체결 ────────────────
         if signal_cache:
@@ -259,6 +294,7 @@ def run_backtest(prices, close, mom, spy_close, trading_days,
                     "stop": sig["stop_loss"], "target": target,
                     "mid": (entry + target) / 2,
                     "half_sold": False, "entry_date": date,
+                    "high_water": entry, "pending_exit": None,
                     "sepa": sig["sepa_score"], "mom_rank": sig["momentum_rank"],
                 }
             signal_cache = []
@@ -364,8 +400,15 @@ def main():
                     help="최대 보유 종목 수 (쉼표 구분)")
     ap.add_argument("--top", type=int, default=config.TOP_N, help="모멘텀 상위 N")
     ap.add_argument("--capital", type=float, default=100_000)
+    ap.add_argument("--exit-modes", default="target",
+                    help="청산 방식 (쉼표 구분): " + " / ".join(EXIT_MODES))
     ap.add_argument("--out", default="data/backtest")
     args = ap.parse_args()
+
+    modes = [m.strip() for m in args.exit_modes.split(",")]
+    for m in modes:
+        if m not in EXIT_MODES:
+            ap.error(f"알 수 없는 청산 방식: {m} (가능: {', '.join(EXIT_MODES)})")
 
     # ── 데이터 ────────────────────────────────────────────────────
     sp500 = get_sp500_list()
@@ -391,27 +434,35 @@ def main():
     spy_seg = spy_close.loc[trading_days]
     bench = args.capital * (spy_seg / spy_seg.iloc[0])
 
+    # 50일선 — MA 이탈 청산에 쓴다. 매 시점 재계산하지 않도록 한 번에 구한다.
+    sma50 = close.rolling(50).mean()
+
     results = {}
-    for mp in [int(x) for x in args.positions.split(",")]:
-        log.info("=== 최대 보유 %d종목 ===", mp)
-        eq, tr = run_backtest(
-            prices, close, mom, spy_close, trading_days,
-            max_positions=mp, top_n=args.top, initial_capital=args.capital,
-            template_min=config.TEMPLATE_PASS_MIN, threshold=config.SEPA_BUY_THRESHOLD)
+    for mode in modes:
+        for mp in [int(x) for x in args.positions.split(",")]:
+            key = f"{mode}|{mp}"
+            log.info("=== [%s] 최대 보유 %d종목 — %s ===", mode, mp, EXIT_MODES[mode])
+            eq, tr = run_backtest(
+                prices, close, mom, spy_close, trading_days, sma50,
+                max_positions=mp, top_n=args.top, initial_capital=args.capital,
+                template_min=config.TEMPLATE_PASS_MIN,
+                threshold=config.SEPA_BUY_THRESHOLD, exit_mode=mode)
 
-        m = metrics(eq["equity"], bench, tr)
-        m["exposure"] = round(float(eq["positions"].mean() / mp * 100), 1)
-        results[mp] = {"metrics": m, "equity": eq, "trades": tr}
+            m = metrics(eq["equity"], bench, tr)
+            m["exposure"] = round(float(eq["positions"].mean() / mp * 100), 1)
+            m["exit_mode"] = mode
+            m["max_positions"] = mp
+            results[key] = {"metrics": m, "equity": eq, "trades": tr}
 
-        s, b = m["strategy"], m["benchmark"]
-        log.info("  전략  CAGR %6.2f%% | MDD %7.2f%% | Sharpe %5.2f | 최종 %s",
-                 s["cagr"], s["mdd"], s["sharpe"], f"{s['final']:,.0f}")
-        log.info("  SPY   CAGR %6.2f%% | MDD %7.2f%% | Sharpe %5.2f | 최종 %s",
-                 b["cagr"], b["mdd"], b["sharpe"], f"{b['final']:,.0f}")
-        log.info("  포지션 %d회 | 승률 %.1f%% | 평균이익 %+.1f%% / 평균손실 %+.1f%% "
-                 "| PF %s | 평균보유 %.0f일 | 노출도 %.1f%%",
-                 m["positions"], m["win_rate"], m["avg_win"], m["avg_loss"],
-                 m["profit_factor"], m["avg_days"], m["exposure"])
+            s, b = m["strategy"], m["benchmark"]
+            log.info("  전략  CAGR %6.2f%% | MDD %7.2f%% | Sharpe %5.2f | 최종 %s",
+                     s["cagr"], s["mdd"], s["sharpe"], f"{s['final']:,.0f}")
+            log.info("  SPY   CAGR %6.2f%% | MDD %7.2f%% | Sharpe %5.2f | 최종 %s",
+                     b["cagr"], b["mdd"], b["sharpe"], f"{b['final']:,.0f}")
+            log.info("  포지션 %d회 | 승률 %.1f%% | 평균이익 %+.1f%% / 평균손실 %+.1f%% "
+                     "| PF %s | 평균보유 %.0f일 | 노출도 %.1f%%",
+                     m["positions"], m["win_rate"], m["avg_win"], m["avg_loss"],
+                     m["profit_factor"], m["avg_days"], m["exposure"])
 
     # ── 저장 ──────────────────────────────────────────────────────
     outdir = ROOT / args.out
@@ -430,25 +481,42 @@ def main():
             "sepa_threshold": config.SEPA_BUY_THRESHOLD,
             "initial_capital": args.capital,
         },
+        "exit_modes": {m: EXIT_MODES[m] for m in modes},
         "caveats": [
             "펀더멘털 40점은 과거 시점 데이터 확보 불가로 중립값(20/40) 고정 — 기술적 85점만 검증",
             "현재 S&P 500 구성종목 기준이라 생존 편향 있음 (수익률 과대평가)",
             "신호는 T일 종가, 체결은 T+1일 시가 — 미래참조 차단",
             "같은 날 손절·익절선을 모두 건드리면 손절 우선 (보수적)",
             "수수료/슬리피지 편도 0.05% 반영, 세금 미반영",
+            "청산 방식은 백테스트에서만 비교한 것으로, 라이브 스크리너 로직은 그대로다",
         ],
-        "by_positions": {str(k): v["metrics"] for k, v in results.items()},
+        "by_run": {k: v["metrics"] for k, v in results.items()},
     }
     (outdir / "summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
 
-    for mp, r in results.items():
-        r["equity"].to_csv(outdir / f"equity_{mp}.csv")
-        r["trades"].to_csv(outdir / f"trades_{mp}.csv", index=False)
+    for key, r in results.items():
+        safe = key.replace("|", "_")
+        r["equity"].to_csv(outdir / f"equity_{safe}.csv")
+        r["trades"].to_csv(outdir / f"trades_{safe}.csv", index=False)
     bench.to_frame("equity").to_csv(outdir / "equity_benchmark.csv")
 
     log.info("저장 완료: %s", outdir)
-    print("\n" + json.dumps(summary["by_positions"], ensure_ascii=False, indent=2))
+
+    # 요약 표
+    print(f"\n{'청산방식':<11}{'보유':>4}{'CAGR':>9}{'MDD':>9}{'Sharpe':>8}"
+          f"{'알파':>9}{'승률':>8}{'평균보유':>9}")
+    print("-" * 68)
+    for key in sorted(results, key=lambda k: -results[k]["metrics"]["strategy"]["cagr"]):
+        m = results[key]["metrics"]
+        s = m["strategy"]
+        print(f"{m['exit_mode']:<11}{m['max_positions']:>4}{s['cagr']:>8.2f}%"
+              f"{s['mdd']:>8.1f}%{s['sharpe']:>8.2f}{m['alpha']:>+8.2f}%"
+              f"{m['win_rate']:>7.1f}%{m['avg_days']:>7.0f}일")
+    b = list(results.values())[0]["metrics"]["benchmark"]
+    print("-" * 68)
+    print(f"{'SPY 매수보유':<11}{'—':>4}{b['cagr']:>8.2f}%{b['mdd']:>8.1f}%"
+          f"{b['sharpe']:>8.2f}{'—':>9}{'—':>8}{'—':>9}")
 
 
 if __name__ == "__main__":
