@@ -49,6 +49,10 @@ header{
 h1{font-size:clamp(21px,4.4vw,29px);font-weight:800;letter-spacing:-.02em;text-wrap:balance}
 .sub{margin-top:7px;font-size:13px;color:var(--ink2)}
 .sub b{color:var(--ink);font-weight:600}
+.navlink{color:var(--accent);text-decoration:none;font-weight:700;
+  border-bottom:1px solid #f5a52455;padding-bottom:1px}
+.navlink:hover{border-bottom-color:var(--accent)}
+.navlink:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
 
 /* ── 시장 요약 ──────────────────────────────────────── */
 .market{
@@ -421,6 +425,7 @@ def build_html(data: Dict) -> str:
     <h1>가중 모멘텀 상위 {total}개의 SEPA 점검</h1>
     <p class="sub">기준일 <b>{_esc(data['scan_date'])}</b> · 유니버스 <b>{data.get('universe_size', 0)}종목</b>
       · 모멘텀 가중치 <b>{_esc(weight_str)}</b></p>
+    <p class="sub" style="margin-top:11px"><a class="navlink" href="./backtest.html">📊 이 전략의 6년 백테스트 결과 보기 →</a></p>
   </div>
 </header>
 

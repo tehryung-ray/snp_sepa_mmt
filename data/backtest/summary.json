@@ -1,0 +1,123 @@
+{
+  "generated_at": "2026-09-07T08:34:40",
+  "period": {
+    "start": "2020-08-28",
+    "end": "2026-09-04",
+    "years": 6.02
+  },
+  "universe_size": 502,
+  "params": {
+    "momentum_weights": {
+      "1": 12,
+      "3": 4,
+      "6": 2,
+      "12": 1
+    },
+    "top_n": 20,
+    "template_min": 7,
+    "sepa_threshold": 60,
+    "initial_capital": 100000
+  },
+  "caveats": [
+    "펀더멘털 40점은 과거 시점 데이터 확보 불가로 중립값(20/40) 고정 — 기술적 85점만 검증",
+    "현재 S&P 500 구성종목 기준이라 생존 편향 있음 (수익률 과대평가)",
+    "신호는 T일 종가, 체결은 T+1일 시가 — 미래참조 차단",
+    "같은 날 손절·익절선을 모두 건드리면 손절 우선 (보수적)",
+    "수수료/슬리피지 편도 0.05% 반영, 세금 미반영"
+  ],
+  "by_positions": {
+    "3": {
+      "years": 6.02,
+      "strategy": {
+        "total_return": 129.4,
+        "cagr": 14.79,
+        "sharpe": 0.74,
+        "sortino": 1.0,
+        "mdd": -33.24,
+        "final": 229401.0
+      },
+      "benchmark": {
+        "total_return": 138.56,
+        "cagr": 15.54,
+        "sharpe": 0.95,
+        "sortino": 1.3,
+        "mdd": -24.5,
+        "final": 238557.0
+      },
+      "alpha": -0.75,
+      "positions": 109,
+      "fills": 152,
+      "wins": 44,
+      "losses": 65,
+      "win_rate": 40.4,
+      "avg_win": 17.3,
+      "avg_loss": -6.84,
+      "avg_days": 54.8,
+      "profit_factor": 1.71,
+      "expectancy": 2.9,
+      "exposure": 92.3
+    },
+    "5": {
+      "years": 6.02,
+      "strategy": {
+        "total_return": 84.14,
+        "cagr": 10.68,
+        "sharpe": 0.63,
+        "sortino": 0.83,
+        "mdd": -25.43,
+        "final": 184138.0
+      },
+      "benchmark": {
+        "total_return": 138.56,
+        "cagr": 15.54,
+        "sharpe": 0.95,
+        "sortino": 1.3,
+        "mdd": -24.5,
+        "final": 238557.0
+      },
+      "alpha": -4.86,
+      "positions": 204,
+      "fills": 281,
+      "wins": 78,
+      "losses": 126,
+      "win_rate": 38.2,
+      "avg_win": 16.49,
+      "avg_loss": -7.05,
+      "avg_days": 48.3,
+      "profit_factor": 1.45,
+      "expectancy": 1.95,
+      "exposure": 91.5
+    },
+    "10": {
+      "years": 6.02,
+      "strategy": {
+        "total_return": 98.28,
+        "cagr": 12.05,
+        "sharpe": 0.73,
+        "sortino": 0.96,
+        "mdd": -22.91,
+        "final": 198279.0
+      },
+      "benchmark": {
+        "total_return": 138.56,
+        "cagr": 15.54,
+        "sharpe": 0.95,
+        "sortino": 1.3,
+        "mdd": -24.5,
+        "final": 238557.0
+      },
+      "alpha": -3.49,
+      "positions": 412,
+      "fills": 566,
+      "wins": 158,
+      "losses": 254,
+      "win_rate": 38.3,
+      "avg_win": 16.51,
+      "avg_loss": -7.0,
+      "avg_days": 48.2,
+      "profit_factor": 1.47,
+      "expectancy": 2.02,
+      "exposure": 92.0
+    }
+  }
+}

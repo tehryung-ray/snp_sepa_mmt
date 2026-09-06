@@ -34,6 +34,10 @@ header{
 h1{font-size:clamp(21px,4.4vw,29px);font-weight:800;letter-spacing:-.02em;text-wrap:balance}
 .sub{margin-top:7px;font-size:13px;color:var(--ink2)}
 .sub b{color:var(--ink);font-weight:600}
+.navlink{color:var(--accent);text-decoration:none;font-weight:700;
+  border-bottom:1px solid #f5a52455;padding-bottom:1px}
+.navlink:hover{border-bottom-color:var(--accent)}
+.navlink:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
 
 /* ── 시장 요약 ──────────────────────────────────────── */
 .market{
@@ -210,6 +214,7 @@ footer b{color:var(--ink2)}
     <h1>가중 모멘텀 상위 20개의 SEPA 점검</h1>
     <p class="sub">기준일 <b>2026-09-04</b> · 유니버스 <b>502종목</b>
       · 모멘텀 가중치 <b>12×1개월 + 4×3개월 + 2×6개월 + 1×12개월</b></p>
+    <p class="sub" style="margin-top:11px"><a class="navlink" href="./backtest.html">📊 이 전략의 6년 백테스트 결과 보기 →</a></p>
   </div>
 </header>
 
@@ -969,7 +974,7 @@ footer b{color:var(--ink2)}
     <p><b>매수 적격</b> — Phase 2 · 트렌드 템플릿 7/8 이상 · SEPA 60점 이상을 모두 만족한 경우에만 표시됩니다.
        모멘텀 상위라도 대부분은 여기서 걸러집니다.</p>
     <p><b>종목 코드</b> — 티커를 누르면 토스증권 해당 종목 페이지가 새 탭으로 열립니다. 행의 나머지 부분을 누르면 상세가 펼쳐집니다.</p>
-    <p style="margin-top:12px">갱신 2026-09-05 13:52 · 데이터 yfinance / Wikipedia</p>
+    <p style="margin-top:12px">갱신 2026-09-07 08:38 · 데이터 yfinance / Wikipedia</p>
     <p style="color:#4a5568">본 페이지는 정보 제공 목적이며 투자 자문이 아닙니다. 과거 성과는 미래 수익을 보장하지 않습니다.</p>
   </div>
 </footer>
