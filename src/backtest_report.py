@@ -78,6 +78,9 @@ h1{font-size:clamp(21px,4.4vw,29px);font-weight:800;letter-spacing:-.02em;text-w
   border-radius:9px;padding:15px 17px;margin:22px 0;font-size:14px;color:var(--ink2)}
 .verdict b{color:var(--ink)}
 .verdict .big{display:block;font-size:16px;font-weight:800;color:var(--ink);margin-bottom:6px}
+.verdict.ok{border-left-color:var(--good)}
+.verdict.warn{border-left-color:#fbbf24}
+.verdict.bad{border-left-color:var(--bad)}
 
 .sec{margin:32px 0}
 .sec h2{font-size:17px;font-weight:800;margin-bottom:4px}
@@ -132,6 +135,125 @@ footer b{color:var(--ink2)}
 
 def _esc(s) -> str:
     return html.escape(str(s if s is not None else ""))
+
+
+def _spearman(xs, ys) -> float:
+    """순위 상관계수. 순위끼리의 피어슨 상관이므로 직접 계산한다(scipy 불필요)."""
+    n = len(xs)
+    if n < 2:
+        return 0.0
+    mx, my = sum(xs) / n, sum(ys) / n
+    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    dx = math.sqrt(sum((x - mx) ** 2 for x in xs))
+    dy = math.sqrt(sum((y - my) ** 2 for y in ys))
+    return num / (dx * dy) if dx and dy else 0.0
+
+
+def _build_split_section(splits: Dict[str, Dict]) -> str:
+    """구간 분할 검증 — 전반/후반에서 순위가 유지되는지.
+
+    6년 한 구간의 1등은 노이즈일 수 있다. 두 구간의 순위 상관을 보면
+    그 순위를 믿어도 되는지 판정할 수 있다.
+    """
+    if len(splits) != 2:
+        return ""
+
+    (l1, s1), (l2, s2) = list(splits.items())
+    a = {k: v["strategy"]["cagr"] for k, v in s1["by_run"].items()}
+    b = {k: v["strategy"]["cagr"] for k, v in s2["by_run"].items()}
+    keys = sorted(set(a) & set(b))
+    if not keys:
+        return ""
+
+    ra = sorted(keys, key=lambda k: -a[k])
+    rb = sorted(keys, key=lambda k: -b[k])
+    rank_a = {k: ra.index(k) + 1 for k in keys}
+    rank_b = {k: rb.index(k) + 1 for k in keys}
+    rho = _spearman([rank_a[k] for k in keys], [rank_b[k] for k in keys])
+
+    bm1 = list(s1["by_run"].values())[0]["benchmark"]
+    bm2 = list(s2["by_run"].values())[0]["benchmark"]
+    beat1 = sum(1 for k in keys if a[k] > bm1["cagr"])
+    beat2 = sum(1 for k in keys if b[k] > bm2["cagr"])
+
+    if rho >= 0.6:
+        judge, jcls = "순위가 대체로 유지됩니다 — 신호로 볼 근거가 있습니다.", "ok"
+    elif rho >= 0.2:
+        judge, jcls = "순위가 약하게만 유지됩니다 — 확정하기엔 이릅니다.", "warn"
+    else:
+        judge, jcls = ("순위가 유지되지 않습니다 — 전체 구간의 1등은 "
+                       "그 구간에만 통한 결과로 봐야 합니다.", "bad")
+
+    # 순위 변동 표 (전반 순위 기준 정렬)
+    rows = []
+    for k in sorted(keys, key=lambda k: rank_a[k]):
+        mode, mp = k.split("|")
+        shift = rank_a[k] - rank_b[k]
+        if shift >= 4:
+            sc, stxt = "pos", f"▲ {shift}"
+        elif shift <= -4:
+            sc, stxt = "neg", f"▼ {abs(shift)}"
+        else:
+            sc, stxt = "", f"{shift:+d}" if shift else "—"
+        rows.append(f"""<tr>
+  <td><span class="swatch" style="background:{MODE_COLORS[mode]}"></span>
+      <b>{MODE_SHORT[mode]}</b> · {mp}종목</td>
+  <td>{_sign(a[k])}</td><td class="num">{rank_a[k]}위</td>
+  <td>{_sign(b[k])}</td><td class="num">{rank_b[k]}위</td>
+  <td class="num {sc}"><b>{stxt}</b></td>
+</tr>""")
+
+    # 방식별 구간 평균
+    mrows = []
+    for mode in MODE_ORDER:
+        ks = [k for k in keys if k.startswith(mode + "|")]
+        if not ks:
+            continue
+        av1 = sum(a[k] for k in ks) / len(ks)
+        av2 = sum(b[k] for k in ks) / len(ks)
+        mrows.append(f"""<tr>
+  <td><span class="swatch" style="background:{MODE_COLORS[mode]}"></span>
+      <b>{MODE_SHORT[mode]}</b></td>
+  <td>{_sign(av1)}</td><td>{_sign(av2)}</td>
+  <td class="num {'neg' if av2 < av1 else 'pos'}">{av2 - av1:+.2f}%p</td>
+</tr>""")
+
+    return f"""
+  <section class="sec">
+    <h2>구간 분할 검증 — 이 순위를 믿을 수 있는가</h2>
+    <p class="sec-note">전체 구간을 반으로 갈라 각각 독립적으로(각 $100,000 새로 시작)
+      돌렸습니다. 같은 방식이 두 구간 모두에서 앞선다면 신호에 가깝고,
+      구간마다 1등이 바뀌면 과최적화입니다.</p>
+
+    <div class="verdict {jcls}">
+      <span class="big">순위 상관 ρ = {rho:+.2f} — {_esc(judge)}</span>
+      <b>{_esc(l1)}</b>({_esc(s1['period']['start'])}~{_esc(s1['period']['end'])})은
+      SPY가 {bm1['cagr']:.2f}%인 구간으로, <b>12개 중 {beat1}개</b>가 SPY를 앞섰습니다.
+      <b>{_esc(l2)}</b>({_esc(s2['period']['start'])}~{_esc(s2['period']['end'])})은
+      SPY가 {bm2['cagr']:.2f}%인 구간으로, <b>12개 중 {beat2}개</b>만 앞섰습니다.
+      전략이 이긴 쪽은 SPY가 약했던 구간입니다 — 종목 선택이 좋았다기보다
+      <b>시장 국면에 따라 결과가 갈렸다</b>고 읽는 편이 정직합니다.
+    </div>
+
+    <div class="scroll">
+    <table class="tbl">
+      <tr>
+        <th>구성</th><th>{_esc(l1)} CAGR</th><th>순위</th>
+        <th>{_esc(l2)} CAGR</th><th>순위</th><th>순위 변동</th>
+      </tr>
+      {''.join(rows)}
+    </table>
+    </div>
+
+    <p class="sec-note" style="margin-top:20px">청산 방식별 구간 평균 —
+      한쪽 구간에서만 좋았던 방식은 그 우위를 신뢰하기 어렵습니다.</p>
+    <div class="scroll">
+    <table class="tbl">
+      <tr><th>청산 방식</th><th>{_esc(l1)} 평균</th><th>{_esc(l2)} 평균</th><th>변화</th></tr>
+      {''.join(mrows)}
+    </table>
+    </div>
+  </section>"""
 
 
 def _sign(v, digits=2, suffix="%"):
@@ -244,7 +366,7 @@ def _build_chart(curves: Dict[str, pd.Series], colors: Dict[str, str],
 
 
 def build_backtest_html(summary: Dict, curves: Dict[str, pd.Series],
-                        chart_positions: int) -> str:
+                        chart_positions: int, splits: Dict = None) -> str:
     by = summary["by_run"]
     p = summary["period"]
     prm = summary["params"]
@@ -291,7 +413,9 @@ def build_backtest_html(summary: Dict, curves: Dict[str, pd.Series],
             f"<b>{max_spread:.1f}%p</b> 출렁입니다 — 방식 간 차이보다 큰 폭입니다. "
             f"표 1등인 {MODE_SHORT[best['exit_mode']]}·{best['max_positions']}종목"
             f"({best['strategy']['cagr']:.2f}%)을 그대로 채택하면 "
-            f"6년 한 구간의 노이즈를 실력으로 착각하는 것입니다.")
+            f"6년 한 구간의 노이즈를 실력으로 착각하는 것입니다."
+            f"<br><br>실제로 구간을 반으로 갈라 검증한 결과, "
+            f"<b>이 순위는 유지되지 않았습니다</b>. 아래 «구간 분할 검증»을 먼저 보십시오.")
     else:
         head = "어떤 구성도 SPY를 앞서지 못했습니다."
         detail = (f"가장 나은 구성이 <b>{MODE_SHORT[best['exit_mode']]} · "
@@ -444,6 +568,8 @@ def build_backtest_html(summary: Dict, curves: Dict[str, pd.Series],
     <ul class="rules" style="font-size:13.5px;color:var(--ink2)">{rules}</ul>
   </section>
 
+  {_build_split_section(splits or {})}
+
   <section class="sec">
     <h2>방식별 안정성</h2>
     <p class="sec-note">보유 종목 수(3·5·10)를 바꿔가며 같은 청산 방식이 얼마나 흔들리는지.
@@ -551,7 +677,7 @@ def build_backtest_html(summary: Dict, curves: Dict[str, pd.Series],
 
 
 def generate(backtest_dir: Path, out_path: Path,
-             chart_positions: int = None) -> Path:
+             chart_positions: int = None, split_dir: Path = None) -> Path:
     """summary.json + equity_*.csv → 리포트 HTML.
 
     차트는 변수를 하나만 움직여야 읽히므로, 보유 종목 수를 하나로 고정하고
@@ -575,7 +701,17 @@ def generate(backtest_dir: Path, out_path: Path,
     bdf = pd.read_csv(backtest_dir / "equity_benchmark.csv", index_col=0, parse_dates=True)
     curves["SPY"] = bdf["equity"]
 
+    # 구간 분할 검증 결과 (있으면 로드) — first/second 순서를 유지한다
+    splits = {}
+    if split_dir and split_dir.exists():
+        for sub in ("first", "second"):
+            f = split_dir / sub / "summary.json"
+            if f.exists():
+                s = json.loads(f.read_text(encoding="utf-8"))
+                splits[s.get("label") or sub] = s
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(
-        build_backtest_html(summary, curves, chart_positions), encoding="utf-8")
+        build_backtest_html(summary, curves, chart_positions, splits),
+        encoding="utf-8")
     return out_path

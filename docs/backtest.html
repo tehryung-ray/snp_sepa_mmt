@@ -46,6 +46,9 @@ h1{font-size:clamp(21px,4.4vw,29px);font-weight:800;letter-spacing:-.02em;text-w
   border-radius:9px;padding:15px 17px;margin:22px 0;font-size:14px;color:var(--ink2)}
 .verdict b{color:var(--ink)}
 .verdict .big{display:block;font-size:16px;font-weight:800;color:var(--ink);margin-bottom:6px}
+.verdict.ok{border-left-color:var(--good)}
+.verdict.warn{border-left-color:#fbbf24}
+.verdict.bad{border-left-color:var(--bad)}
 
 .sec{margin:32px 0}
 .sec h2{font-size:17px;font-weight:800;margin-bottom:4px}
@@ -119,7 +122,7 @@ footer b{color:var(--ink2)}
 
   <div class="verdict">
     <span class="big">고정 목표가를 없애자 3개 구성이 수익률에서 SPY를 앞섰습니다. 다만 위험조정 성과로는 여전히 뒤집지 못했습니다.</span>
-    평균으로 보면 <b>50일선 이탈</b>이 CAGR <b>16.34%</b>로 SPY(15.54%)를 웃도는 유일한 방식입니다. 기존 고정 익절(고정 익절) 평균 12.51%보다 +3.84%p 개선입니다. <br><br>그러나 <b>Sharpe로 SPY(0.95)를 넘긴 구성은 0개</b>입니다. 수익률이 오른 만큼 변동성과 낙폭도 커졌다는 뜻입니다. 게다가 같은 청산 방식이라도 보유 종목 수만 바꾸면 CAGR이 최대 <b>7.9%p</b> 출렁입니다 — 방식 간 차이보다 큰 폭입니다. 표 1등인 50일선 이탈·5종목(19.66%)을 그대로 채택하면 6년 한 구간의 노이즈를 실력으로 착각하는 것입니다.
+    평균으로 보면 <b>50일선 이탈</b>이 CAGR <b>16.34%</b>로 SPY(15.54%)를 웃도는 유일한 방식입니다. 기존 고정 익절(고정 익절) 평균 12.51%보다 +3.84%p 개선입니다. <br><br>그러나 <b>Sharpe로 SPY(0.95)를 넘긴 구성은 0개</b>입니다. 수익률이 오른 만큼 변동성과 낙폭도 커졌다는 뜻입니다. 게다가 같은 청산 방식이라도 보유 종목 수만 바꾸면 CAGR이 최대 <b>7.9%p</b> 출렁입니다 — 방식 간 차이보다 큰 폭입니다. 표 1등인 50일선 이탈·5종목(19.66%)을 그대로 채택하면 6년 한 구간의 노이즈를 실력으로 착각하는 것입니다.<br><br>실제로 구간을 반으로 갈라 검증한 결과, <b>이 순위는 유지되지 않았습니다</b>. 아래 «구간 분할 검증»을 먼저 보십시오.
   </div>
 
   <section class="sec">
@@ -138,6 +141,135 @@ footer b{color:var(--ink2)}
     <p class="sec-note">진입 규칙은 모두 동일하고 파는 방법만 다릅니다.
       어느 방식이든 SEPA가 산출한 초기 손절가는 하한으로 유지됩니다.</p>
     <ul class="rules" style="font-size:13.5px;color:var(--ink2)"><li><b style="color:#3987e5">고정 익절</b> — 고정 익절 — 1차 50% 후 +30% 목표가 전량 (기존)</li><li><b style="color:#d95926">50일선 이탈</b> — 50일선 종가 이탈 시 전량 (고정 목표가 없음)</li><li><b style="color:#199e70">−20% 추적</b> — 고점 대비 −20% 추적손절 (고정 목표가 없음)</li><li><b style="color:#c98500">절반+50일선</b> — 1차 익절 50% 후 나머지는 50일선 이탈까지 보유</li></ul>
+  </section>
+
+  
+  <section class="sec">
+    <h2>구간 분할 검증 — 이 순위를 믿을 수 있는가</h2>
+    <p class="sec-note">전체 구간을 반으로 갈라 각각 독립적으로(각 $100,000 새로 시작)
+      돌렸습니다. 같은 방식이 두 구간 모두에서 앞선다면 신호에 가깝고,
+      구간마다 1등이 바뀌면 과최적화입니다.</p>
+
+    <div class="verdict bad">
+      <span class="big">순위 상관 ρ = -0.34 — 순위가 유지되지 않습니다 — 전체 구간의 1등은 그 구간에만 통한 결과로 봐야 합니다.</span>
+      <b>전반부</b>(2020-08-28~2023-09-01)은
+      SPY가 10.39%인 구간으로, <b>12개 중 12개</b>가 SPY를 앞섰습니다.
+      <b>후반부</b>(2023-09-01~2026-09-04)은
+      SPY가 20.94%인 구간으로, <b>12개 중 1개</b>만 앞섰습니다.
+      전략이 이긴 쪽은 SPY가 약했던 구간입니다 — 종목 선택이 좋았다기보다
+      <b>시장 국면에 따라 결과가 갈렸다</b>고 읽는 편이 정직합니다.
+    </div>
+
+    <div class="scroll">
+    <table class="tbl">
+      <tr>
+        <th>구성</th><th>전반부 CAGR</th><th>순위</th>
+        <th>후반부 CAGR</th><th>순위</th><th>순위 변동</th>
+      </tr>
+      <tr>
+  <td><span class="swatch" style="background:#199e70"></span>
+      <b>−20% 추적</b> · 3종목</td>
+  <td><span class="pos num">+33.31%</span></td><td class="num">1위</td>
+  <td><span class="pos num">+14.43%</span></td><td class="num">3위</td>
+  <td class="num "><b>-2</b></td>
+</tr><tr>
+  <td><span class="swatch" style="background:#3987e5"></span>
+      <b>고정 익절</b> · 3종목</td>
+  <td><span class="pos num">+32.57%</span></td><td class="num">2위</td>
+  <td><span class="neg num">-4.38%</span></td><td class="num">12위</td>
+  <td class="num neg"><b>▼ 10</b></td>
+</tr><tr>
+  <td><span class="swatch" style="background:#199e70"></span>
+      <b>−20% 추적</b> · 5종목</td>
+  <td><span class="pos num">+22.65%</span></td><td class="num">3위</td>
+  <td><span class="pos num">+9.05%</span></td><td class="num">8위</td>
+  <td class="num neg"><b>▼ 5</b></td>
+</tr><tr>
+  <td><span class="swatch" style="background:#3987e5"></span>
+      <b>고정 익절</b> · 5종목</td>
+  <td><span class="pos num">+22.63%</span></td><td class="num">4위</td>
+  <td><span class="pos num">+3.58%</span></td><td class="num">10위</td>
+  <td class="num neg"><b>▼ 6</b></td>
+</tr><tr>
+  <td><span class="swatch" style="background:#3987e5"></span>
+      <b>고정 익절</b> · 10종목</td>
+  <td><span class="pos num">+21.14%</span></td><td class="num">5위</td>
+  <td><span class="pos num">+4.40%</span></td><td class="num">9위</td>
+  <td class="num neg"><b>▼ 4</b></td>
+</tr><tr>
+  <td><span class="swatch" style="background:#d95926"></span>
+      <b>50일선 이탈</b> · 5종목</td>
+  <td><span class="pos num">+18.80%</span></td><td class="num">6위</td>
+  <td><span class="pos num">+20.74%</span></td><td class="num">2위</td>
+  <td class="num pos"><b>▲ 4</b></td>
+</tr><tr>
+  <td><span class="swatch" style="background:#199e70"></span>
+      <b>−20% 추적</b> · 10종목</td>
+  <td><span class="pos num">+17.61%</span></td><td class="num">7위</td>
+  <td><span class="pos num">+12.39%</span></td><td class="num">5위</td>
+  <td class="num "><b>+2</b></td>
+</tr><tr>
+  <td><span class="swatch" style="background:#c98500"></span>
+      <b>절반+50일선</b> · 5종목</td>
+  <td><span class="pos num">+15.75%</span></td><td class="num">8위</td>
+  <td><span class="pos num">+10.25%</span></td><td class="num">7위</td>
+  <td class="num "><b>+1</b></td>
+</tr><tr>
+  <td><span class="swatch" style="background:#d95926"></span>
+      <b>50일선 이탈</b> · 3종목</td>
+  <td><span class="pos num">+14.78%</span></td><td class="num">9위</td>
+  <td><span class="pos num">+11.30%</span></td><td class="num">6위</td>
+  <td class="num "><b>+3</b></td>
+</tr><tr>
+  <td><span class="swatch" style="background:#c98500"></span>
+      <b>절반+50일선</b> · 3종목</td>
+  <td><span class="pos num">+14.18%</span></td><td class="num">10위</td>
+  <td><span class="pos num">+3.25%</span></td><td class="num">11위</td>
+  <td class="num "><b>-1</b></td>
+</tr><tr>
+  <td><span class="swatch" style="background:#c98500"></span>
+      <b>절반+50일선</b> · 10종목</td>
+  <td><span class="pos num">+12.80%</span></td><td class="num">11위</td>
+  <td><span class="pos num">+12.55%</span></td><td class="num">4위</td>
+  <td class="num pos"><b>▲ 7</b></td>
+</tr><tr>
+  <td><span class="swatch" style="background:#d95926"></span>
+      <b>50일선 이탈</b> · 10종목</td>
+  <td><span class="pos num">+11.43%</span></td><td class="num">12위</td>
+  <td><span class="pos num">+22.28%</span></td><td class="num">1위</td>
+  <td class="num pos"><b>▲ 11</b></td>
+</tr>
+    </table>
+    </div>
+
+    <p class="sec-note" style="margin-top:20px">청산 방식별 구간 평균 —
+      한쪽 구간에서만 좋았던 방식은 그 우위를 신뢰하기 어렵습니다.</p>
+    <div class="scroll">
+    <table class="tbl">
+      <tr><th>청산 방식</th><th>전반부 평균</th><th>후반부 평균</th><th>변화</th></tr>
+      <tr>
+  <td><span class="swatch" style="background:#3987e5"></span>
+      <b>고정 익절</b></td>
+  <td><span class="pos num">+25.45%</span></td><td><span class="pos num">+1.20%</span></td>
+  <td class="num neg">-24.25%p</td>
+</tr><tr>
+  <td><span class="swatch" style="background:#d95926"></span>
+      <b>50일선 이탈</b></td>
+  <td><span class="pos num">+15.00%</span></td><td><span class="pos num">+18.11%</span></td>
+  <td class="num pos">+3.10%p</td>
+</tr><tr>
+  <td><span class="swatch" style="background:#199e70"></span>
+      <b>−20% 추적</b></td>
+  <td><span class="pos num">+24.52%</span></td><td><span class="pos num">+11.96%</span></td>
+  <td class="num neg">-12.57%p</td>
+</tr><tr>
+  <td><span class="swatch" style="background:#c98500"></span>
+      <b>절반+50일선</b></td>
+  <td><span class="pos num">+14.24%</span></td><td><span class="pos num">+8.68%</span></td>
+  <td class="num neg">-5.56%p</td>
+</tr>
+    </table>
+    </div>
   </section>
 
   <section class="sec">
@@ -482,7 +614,7 @@ footer b{color:var(--ink2)}
        Phase 2 · 트렌드 템플릿 7/8 이상 · SEPA 60점 이상을
        모두 만족한 종목을 SEPA 점수 순으로 편입. 체결은 다음 거래일 시가.</p>
     <p><b>모멘텀</b> — 12×1개월 + 4×3개월 + 2×6개월 + 1×12개월 수익률의 가중합.</p>
-    <p style="margin-top:12px">생성 2026-09-07 08:47 · 데이터 yfinance / Wikipedia</p>
+    <p style="margin-top:12px">생성 2026-09-07 10:30 · 데이터 yfinance / Wikipedia</p>
     <p style="color:#4a5568">본 페이지는 정보 제공 목적이며 투자 자문이 아닙니다.
        백테스트 결과는 과거 데이터에 대한 시뮬레이션이며 미래 수익을 보장하지 않습니다.</p>
   </div>

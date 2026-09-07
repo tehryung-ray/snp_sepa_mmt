@@ -1,0 +1,434 @@
+{
+  "generated_at": "2026-09-07T10:01:14",
+  "label": "전반부",
+  "period": {
+    "start": "2020-08-28",
+    "end": "2023-09-01",
+    "years": 3.01
+  },
+  "universe_size": 502,
+  "params": {
+    "momentum_weights": {
+      "1": 12,
+      "3": 4,
+      "6": 2,
+      "12": 1
+    },
+    "top_n": 20,
+    "template_min": 7,
+    "sepa_threshold": 60,
+    "initial_capital": 100000
+  },
+  "exit_modes": {
+    "target": "고정 익절 — 1차 50% 후 +30% 목표가 전량 (기존)",
+    "ma50": "50일선 종가 이탈 시 전량 (고정 목표가 없음)",
+    "trail20": "고점 대비 −20% 추적손절 (고정 목표가 없음)",
+    "half_ma50": "1차 익절 50% 후 나머지는 50일선 이탈까지 보유"
+  },
+  "caveats": [
+    "펀더멘털 40점은 과거 시점 데이터 확보 불가로 중립값(20/40) 고정 — 기술적 85점만 검증",
+    "현재 S&P 500 구성종목 기준이라 생존 편향 있음 (수익률 과대평가)",
+    "신호는 T일 종가, 체결은 T+1일 시가 — 미래참조 차단",
+    "같은 날 손절·익절선을 모두 건드리면 손절 우선 (보수적)",
+    "수수료/슬리피지 편도 0.05% 반영, 세금 미반영",
+    "청산 방식은 백테스트에서만 비교한 것으로, 라이브 스크리너 로직은 그대로다"
+  ],
+  "by_run": {
+    "target|3": {
+      "years": 3.01,
+      "strategy": {
+        "total_return": 133.58,
+        "cagr": 32.57,
+        "sharpe": 1.44,
+        "sortino": 2.11,
+        "mdd": -18.33,
+        "final": 233577.0
+      },
+      "benchmark": {
+        "total_return": 34.64,
+        "cagr": 10.39,
+        "sharpe": 0.64,
+        "sortino": 0.91,
+        "mdd": -24.5,
+        "final": 134635.0
+      },
+      "alpha": 22.18,
+      "positions": 48,
+      "fills": 71,
+      "wins": 24,
+      "losses": 24,
+      "win_rate": 50.0,
+      "avg_win": 19.09,
+      "avg_loss": -6.79,
+      "avg_days": 59.3,
+      "profit_factor": 2.81,
+      "expectancy": 6.15,
+      "exposure": 92.5,
+      "exit_mode": "target",
+      "max_positions": 3
+    },
+    "target|5": {
+      "years": 3.01,
+      "strategy": {
+        "total_return": 84.75,
+        "cagr": 22.63,
+        "sharpe": 1.23,
+        "sortino": 1.74,
+        "mdd": -20.61,
+        "final": 184751.0
+      },
+      "benchmark": {
+        "total_return": 34.64,
+        "cagr": 10.39,
+        "sharpe": 0.64,
+        "sortino": 0.91,
+        "mdd": -24.5,
+        "final": 134635.0
+      },
+      "alpha": 12.24,
+      "positions": 88,
+      "fills": 124,
+      "wins": 38,
+      "losses": 50,
+      "win_rate": 43.2,
+      "avg_win": 18.12,
+      "avg_loss": -6.68,
+      "avg_days": 51.1,
+      "profit_factor": 2.06,
+      "expectancy": 4.03,
+      "exposure": 91.9,
+      "exit_mode": "target",
+      "max_positions": 5
+    },
+    "target|10": {
+      "years": 3.01,
+      "strategy": {
+        "total_return": 78.06,
+        "cagr": 21.14,
+        "sharpe": 1.21,
+        "sortino": 1.64,
+        "mdd": -17.85,
+        "final": 178055.0
+      },
+      "benchmark": {
+        "total_return": 34.64,
+        "cagr": 10.39,
+        "sharpe": 0.64,
+        "sortino": 0.91,
+        "mdd": -24.5,
+        "final": 134635.0
+      },
+      "alpha": 10.75,
+      "positions": 178,
+      "fills": 254,
+      "wins": 78,
+      "losses": 100,
+      "win_rate": 43.8,
+      "avg_win": 16.32,
+      "avg_loss": -6.49,
+      "avg_days": 50.1,
+      "profit_factor": 1.96,
+      "expectancy": 3.5,
+      "exposure": 92.0,
+      "exit_mode": "target",
+      "max_positions": 10
+    },
+    "ma50|3": {
+      "years": 3.01,
+      "strategy": {
+        "total_return": 51.39,
+        "cagr": 14.78,
+        "sharpe": 0.65,
+        "sortino": 0.95,
+        "mdd": -36.38,
+        "final": 151395.0
+      },
+      "benchmark": {
+        "total_return": 34.64,
+        "cagr": 10.39,
+        "sharpe": 0.64,
+        "sortino": 0.91,
+        "mdd": -24.5,
+        "final": 134635.0
+      },
+      "alpha": 4.39,
+      "positions": 69,
+      "fills": 69,
+      "wins": 26,
+      "losses": 43,
+      "win_rate": 37.7,
+      "avg_win": 13.94,
+      "avg_loss": -5.0,
+      "avg_days": 39.6,
+      "profit_factor": 1.68,
+      "expectancy": 2.13,
+      "exposure": 90.0,
+      "exit_mode": "ma50",
+      "max_positions": 3
+    },
+    "ma50|5": {
+      "years": 3.01,
+      "strategy": {
+        "total_return": 67.92,
+        "cagr": 18.8,
+        "sharpe": 0.8,
+        "sortino": 1.12,
+        "mdd": -29.91,
+        "final": 167924.0
+      },
+      "benchmark": {
+        "total_return": 34.64,
+        "cagr": 10.39,
+        "sharpe": 0.64,
+        "sortino": 0.91,
+        "mdd": -24.5,
+        "final": 134635.0
+      },
+      "alpha": 8.41,
+      "positions": 117,
+      "fills": 117,
+      "wins": 41,
+      "losses": 76,
+      "win_rate": 35.0,
+      "avg_win": 16.01,
+      "avg_loss": -4.87,
+      "avg_days": 40.2,
+      "profit_factor": 1.77,
+      "expectancy": 2.45,
+      "exposure": 90.7,
+      "exit_mode": "ma50",
+      "max_positions": 5
+    },
+    "ma50|10": {
+      "years": 3.01,
+      "strategy": {
+        "total_return": 38.5,
+        "cagr": 11.43,
+        "sharpe": 0.59,
+        "sortino": 0.8,
+        "mdd": -28.33,
+        "final": 138499.0
+      },
+      "benchmark": {
+        "total_return": 34.64,
+        "cagr": 10.39,
+        "sharpe": 0.64,
+        "sortino": 0.91,
+        "mdd": -24.5,
+        "final": 134635.0
+      },
+      "alpha": 1.04,
+      "positions": 240,
+      "fills": 240,
+      "wins": 80,
+      "losses": 160,
+      "win_rate": 33.3,
+      "avg_win": 14.11,
+      "avg_loss": -5.01,
+      "avg_days": 39.2,
+      "profit_factor": 1.41,
+      "expectancy": 1.37,
+      "exposure": 90.0,
+      "exit_mode": "ma50",
+      "max_positions": 10
+    },
+    "trail20|3": {
+      "years": 3.01,
+      "strategy": {
+        "total_return": 137.52,
+        "cagr": 33.31,
+        "sharpe": 1.23,
+        "sortino": 1.75,
+        "mdd": -27.4,
+        "final": 237519.0
+      },
+      "benchmark": {
+        "total_return": 34.64,
+        "cagr": 10.39,
+        "sharpe": 0.64,
+        "sortino": 0.91,
+        "mdd": -24.5,
+        "final": 134635.0
+      },
+      "alpha": 22.92,
+      "positions": 23,
+      "fills": 23,
+      "wins": 8,
+      "losses": 15,
+      "win_rate": 34.8,
+      "avg_win": 28.88,
+      "avg_loss": -5.69,
+      "avg_days": 85.7,
+      "profit_factor": 2.71,
+      "expectancy": 6.34,
+      "exposure": 96.0,
+      "exit_mode": "trail20",
+      "max_positions": 3
+    },
+    "trail20|5": {
+      "years": 3.01,
+      "strategy": {
+        "total_return": 84.82,
+        "cagr": 22.65,
+        "sharpe": 0.96,
+        "sortino": 1.31,
+        "mdd": -28.42,
+        "final": 184824.0
+      },
+      "benchmark": {
+        "total_return": 34.64,
+        "cagr": 10.39,
+        "sharpe": 0.64,
+        "sortino": 0.91,
+        "mdd": -24.5,
+        "final": 134635.0
+      },
+      "alpha": 12.26,
+      "positions": 44,
+      "fills": 44,
+      "wins": 13,
+      "losses": 31,
+      "win_rate": 29.5,
+      "avg_win": 25.88,
+      "avg_loss": -5.72,
+      "avg_days": 74.2,
+      "profit_factor": 1.9,
+      "expectancy": 3.62,
+      "exposure": 95.5,
+      "exit_mode": "trail20",
+      "max_positions": 5
+    },
+    "trail20|10": {
+      "years": 3.01,
+      "strategy": {
+        "total_return": 62.93,
+        "cagr": 17.61,
+        "sharpe": 0.84,
+        "sortino": 1.11,
+        "mdd": -24.46,
+        "final": 162926.0
+      },
+      "benchmark": {
+        "total_return": 34.64,
+        "cagr": 10.39,
+        "sharpe": 0.64,
+        "sortino": 0.91,
+        "mdd": -24.5,
+        "final": 134635.0
+      },
+      "alpha": 7.22,
+      "positions": 106,
+      "fills": 106,
+      "wins": 25,
+      "losses": 81,
+      "win_rate": 23.6,
+      "avg_win": 26.87,
+      "avg_loss": -5.59,
+      "avg_days": 71.2,
+      "profit_factor": 1.48,
+      "expectancy": 2.06,
+      "exposure": 94.1,
+      "exit_mode": "trail20",
+      "max_positions": 10
+    },
+    "half_ma50|3": {
+      "years": 3.01,
+      "strategy": {
+        "total_return": 49.03,
+        "cagr": 14.18,
+        "sharpe": 0.72,
+        "sortino": 1.02,
+        "mdd": -29.97,
+        "final": 149025.0
+      },
+      "benchmark": {
+        "total_return": 34.64,
+        "cagr": 10.39,
+        "sharpe": 0.64,
+        "sortino": 0.91,
+        "mdd": -24.5,
+        "final": 134635.0
+      },
+      "alpha": 3.79,
+      "positions": 70,
+      "fills": 91,
+      "wins": 28,
+      "losses": 42,
+      "win_rate": 40.0,
+      "avg_win": 12.79,
+      "avg_loss": -5.01,
+      "avg_days": 39.9,
+      "profit_factor": 1.7,
+      "expectancy": 2.11,
+      "exposure": 90.0,
+      "exit_mode": "half_ma50",
+      "max_positions": 3
+    },
+    "half_ma50|5": {
+      "years": 3.01,
+      "strategy": {
+        "total_return": 55.29,
+        "cagr": 15.75,
+        "sharpe": 0.83,
+        "sortino": 1.14,
+        "mdd": -23.04,
+        "final": 155289.0
+      },
+      "benchmark": {
+        "total_return": 34.64,
+        "cagr": 10.39,
+        "sharpe": 0.64,
+        "sortino": 0.91,
+        "mdd": -24.5,
+        "final": 134635.0
+      },
+      "alpha": 5.36,
+      "positions": 119,
+      "fills": 153,
+      "wins": 45,
+      "losses": 74,
+      "win_rate": 37.8,
+      "avg_win": 13.52,
+      "avg_loss": -4.94,
+      "avg_days": 40.0,
+      "profit_factor": 1.67,
+      "expectancy": 2.04,
+      "exposure": 90.6,
+      "exit_mode": "half_ma50",
+      "max_positions": 5
+    },
+    "half_ma50|10": {
+      "years": 3.01,
+      "strategy": {
+        "total_return": 43.69,
+        "cagr": 12.8,
+        "sharpe": 0.75,
+        "sortino": 1.02,
+        "mdd": -22.72,
+        "final": 143687.0
+      },
+      "benchmark": {
+        "total_return": 34.64,
+        "cagr": 10.39,
+        "sharpe": 0.64,
+        "sortino": 0.91,
+        "mdd": -24.5,
+        "final": 134635.0
+      },
+      "alpha": 2.41,
+      "positions": 246,
+      "fills": 317,
+      "wins": 92,
+      "losses": 154,
+      "win_rate": 37.4,
+      "avg_win": 12.82,
+      "avg_loss": -5.04,
+      "avg_days": 38.5,
+      "profit_factor": 1.52,
+      "expectancy": 1.64,
+      "exposure": 90.0,
+      "exit_mode": "half_ma50",
+      "max_positions": 10
+    }
+  }
+}

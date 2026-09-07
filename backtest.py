@@ -400,6 +400,11 @@ def main():
                     help="최대 보유 종목 수 (쉼표 구분)")
     ap.add_argument("--top", type=int, default=config.TOP_N, help="모멘텀 상위 N")
     ap.add_argument("--capital", type=float, default=100_000)
+    ap.add_argument("--start", default=None,
+                    help="백테스트 시작일 YYYY-MM-DD (구간 분할 검증용). "
+                         "지정 시 --years 는 다운로드 기간에만 쓰인다.")
+    ap.add_argument("--end", default=None, help="백테스트 종료일 YYYY-MM-DD")
+    ap.add_argument("--label", default=None, help="요약에 기록할 구간 이름")
     ap.add_argument("--exit-modes", default="target",
                     help="청산 방식 (쉼표 구분): " + " / ".join(EXIT_MODES))
     ap.add_argument("--out", default="data/backtest")
@@ -424,10 +429,19 @@ def main():
     mom = calc_momentum_score(close, config.MOMENTUM_WEIGHTS, config.SKIP_RECENT_MONTH)
     spy_close = close[config.BENCHMARK]
 
-    # 모멘텀 12개월 + 여유 = 최소 300일 확보된 시점부터 시작
-    start_idx = max(300, len(close) - int(args.years * 252))
+    # 모멘텀 12개월 + 여유 = 최소 300일 확보된 시점부터 시작.
+    # --start 를 주면 워밍업만 확보하고 나머지는 날짜로 자른다.
+    start_idx = 300 if args.start else max(300, len(close) - int(args.years * 252))
     trading_days = close.index[start_idx:]
-    log.info("백테스트 구간: %s ~ %s (%d 거래일)",
+    if args.start:
+        trading_days = trading_days[trading_days >= pd.Timestamp(args.start)]
+    if args.end:
+        trading_days = trading_days[trading_days <= pd.Timestamp(args.end)]
+    if len(trading_days) < 60:
+        log.error("구간이 너무 짧습니다: %d 거래일", len(trading_days))
+        sys.exit(1)
+    log.info("백테스트 구간%s: %s ~ %s (%d 거래일)",
+             f" [{args.label}]" if args.label else "",
              trading_days[0].date(), trading_days[-1].date(), len(trading_days))
 
     # 벤치마크 (같은 구간, 동일 초기자본)
@@ -470,6 +484,7 @@ def main():
 
     summary = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "label": args.label,
         "period": {"start": str(trading_days[0].date()),
                    "end": str(trading_days[-1].date()),
                    "years": round((trading_days[-1] - trading_days[0]).days / 365.25, 2)},
