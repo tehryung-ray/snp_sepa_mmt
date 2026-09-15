@@ -1,7 +1,7 @@
 {
   "scan_date": "2026-09-11",
-  "generated_at": "2026-09-11T23:59:54",
-  "universe_size": 502,
+  "generated_at": "2026-09-15T00:25:04",
+  "universe_size": 501,
   "top_n": 20,
   "momentum_weights": {
     "1": 12,
@@ -415,7 +415,7 @@
         "price_30pct_above_52w_low": true,
         "distance_from_52w_low_pct": 109.8,
         "price_near_52w_high": true,
-        "distance_from_52w_high_pct": 2.0,
+        "distance_from_52w_high_pct": 2.1,
         "confirmed_stage_2": true
       },
       "passes_template": true,
@@ -435,10 +435,10 @@
       "risk_amount": 3.55,
       "risk_reward_ratio": 3.0,
       "rs_slope": 0.812,
-      "gap_from_52w_high": -2.0,
+      "gap_from_52w_high": -2.1,
       "sma_50": 27.8,
       "sma_200": 22.54,
-      "vcp_quality": 18.4,
+      "vcp_quality": 18.3,
       "is_vcp": false,
       "breakout": null,
       "reasons": [
@@ -451,7 +451,7 @@
         "상승일 거래량 소폭 우위 (비율 1.11)",
         "✓ 강한 상대강도: 0.812 (SPY 대비 초과수익)",
         "🟢 양호한 손익비: 3.0:1",
-        "🟢 52주 고가권: 고가 대비 2.0% (피벗 존)"
+        "🟢 52주 고가권: 고가 대비 2.1% (피벗 존)"
       ],
       "rank": 7,
       "momentum_score": 6.63,
@@ -673,7 +673,7 @@
         "fundamental": 35.2,
         "risk_reward": 0.0,
         "relative_strength": 10,
-        "volume": 2.6,
+        "volume": 2.7,
         "entry": 0.0,
         "vcp": 0.0
       },
@@ -696,7 +696,7 @@
         "다소 과열: 50일선 +24.7%",
         "🟡 매출: 3Q 평균 3.5% QoQ (9.2% → -0.6% → 1.9%)",
         "🟢 EPS: +119% YoY (강한 이익 성장)",
-        "⚠ 하락일 거래량 우위 (비율 0.76 — 분산 매도)",
+        "⚠ 하락일 거래량 우위 (비율 0.77 — 분산 매도)",
         "✓ 강한 상대강도: 1.668 (SPY 대비 초과수익)",
         "🔴 부족한 손익비: 0.0:1 (최소 2:1 필요)",
         "진입 구간 이탈: 50일선 24.7%"
@@ -1206,7 +1206,7 @@
       "phase": 1,
       "phase_name": "Base Building",
       "phase_confidence": 75,
-      "sepa_score": 60.8,
+      "sepa_score": 60.6,
       "is_buy": false,
       "blocked_reason": "Phase 1 (미너비니는 Phase 2만 매수)",
       "template_score": 62,
@@ -1229,7 +1229,7 @@
         "fundamental": 40.0,
         "risk_reward": 14.4,
         "relative_strength": 0,
-        "volume": 6.4,
+        "volume": 6.2,
         "entry": 0.0,
         "vcp": 0.0
       },
@@ -1252,7 +1252,7 @@
         "🟢 매출: 3Q 평균 10.0% QoQ (7.1% → 10.6% → 12.3%)",
         "🟢 EPS: +989% YoY (강한 이익 성장)",
         "⚠ 재고 증가 (11.3% QoQ)",
-        "상승일 거래량 소폭 우위 (비율 1.14)",
+        "상승일 거래량 소폭 우위 (비율 1.12)",
         "⚠ 상대강도 하락: -0.370 (SPY 대비 부진)",
         "🟢 양호한 손익비: 3.9:1",
         "진입 구간 이탈: 50일선 -9.6%"
